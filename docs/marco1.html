@@ -1,0 +1,174 @@
+<title>TIC Marco 1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: relatório de marco, uma coluna de leitura com tabelas operacionais; azul-marinho e ouro da TIC */
+:root {
+  --bg: #f5f7fa; --papel: #ffffff; --fg: #18212e; --fg2: #556275; --linha: #d9e0e9;
+  --marinho: #13294b; --ouro: #c98a0c; --ok: #17663f; --ok-bg: #e7f6ee; --at: #7a4b00; --at-bg: #fff4db; --pe: #9f1d1d; --pe-bg: #fdecec;
+  --display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; --texto: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1520; --papel: #151f2d; --fg: #e4eaf2; --fg2: #9aa8ba; --linha: #2a3748;
+  --marinho: #9db9e6; --ouro: #e8b04a; --ok: #6fd3a0; --ok-bg: #12301f; --at: #f0c068; --at-bg: #33270f; --pe: #ff8f8f; --pe-bg: #3a1616; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1520; --papel: #151f2d; --fg: #e4eaf2; --fg2: #9aa8ba; --linha: #2a3748;
+  --marinho: #9db9e6; --ouro: #e8b04a; --ok: #6fd3a0; --ok-bg: #12301f; --at: #f0c068; --at-bg: #33270f; --pe: #ff8f8f; --pe-bg: #3a1616; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 400 15px/1.6 var(--texto); }
+.folha { max-width: 920px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 36px; }
+header { display: flex; flex-direction: column; gap: 10px; border-bottom: 3px solid var(--ouro); padding-bottom: 22px; }
+.olho { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg2); }
+h1 { margin: 0; font: 700 34px/1.15 var(--display); color: var(--marinho); text-wrap: balance; }
+h2 { margin: 0 0 12px; font: 700 21px/1.25 var(--display); color: var(--marinho); }
+h3 { margin: 18px 0 8px; font-size: 15px; font-weight: 700; }
+p { margin: 0 0 10px; max-width: 70ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--fg2); }
+.meta b { color: var(--fg); font-weight: 600; }
+section { display: flex; flex-direction: column; }
+.resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.bloco { background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.bloco .rot { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--fg2); }
+.bloco .val { font: 700 19px/1.3 var(--display); color: var(--marinho); }
+.bloco .nota { font-size: 13px; color: var(--fg2); }
+.tab { overflow-x: auto; border: 1px solid var(--linha); border-radius: 10px; background: var(--papel); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 620px; }
+th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--fg2); padding: 10px 14px; border-bottom: 1px solid var(--linha); background: color-mix(in srgb, var(--papel) 85%, var(--linha)); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.selo { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.s-ok { background: var(--ok-bg); color: var(--ok); } .s-at { background: var(--at-bg); color: var(--at); } .s-pe { background: var(--pe-bg); color: var(--pe); }
+.arq { background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 16px; overflow-x: auto; }
+.arq pre { margin: 0; font: 13px/1.55 ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--fg); }
+ul, ol { margin: 0 0 10px; padding-left: 20px; max-width: 72ch; } li { margin: 3px 0; }
+.pergunta { background: var(--papel); border: 1px solid var(--linha); border-left: 0; border-radius: 10px; padding: 12px 16px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; }
+.pergunta .n { font: 700 18px var(--display); color: var(--ouro); }
+.pergunta p { margin: 0; } .pergunta small { color: var(--fg2); font-size: 13px; }
+.lista-p { display: flex; flex-direction: column; gap: 10px; }
+footer { font-size: 13px; color: var(--fg2); border-top: 1px solid var(--linha); padding-top: 14px; }
+code { font: 13px ui-monospace, Consolas, monospace; background: color-mix(in srgb, var(--papel) 80%, var(--linha)); padding: 1px 5px; border-radius: 4px; }
+</style>
+
+<div class="folha">
+<header>
+  <span class="olho">TIC · Painel Digital · Fase 1</span>
+  <h1>Marco 1: arquitetura e prova técnica</h1>
+  <div class="meta"><span>Para: <b>Michael Fukuda</b></span><span>De: <b>Marcus</b></span><span>Situação em <b>20/11/2026</b></span><span>Marco: <b>27/11/2026</b></span></div>
+</header>
+
+<section>
+  <h2>Resumo</h2>
+  <div class="resumo">
+    <div class="bloco"><span class="rot">Arquitetura</span><span class="val">Definida</span><span class="nota">PostgreSQL + n8n + Angular, clean (decisões 001 e 002)</span></div>
+    <div class="bloco"><span class="rot">Base do portal</span><span class="val">Pronta (local)</span><span class="nota">Banco, login, perfis e Admin de usuários testados</span></div>
+    <div class="bloco"><span class="rot">Prova técnica</span><span class="val">Aguardando</span><span class="nota">Documentação Autotrac e caminho do Moovsec (Flávio, 25/11)</span></div>
+    <div class="bloco"><span class="rot">VPS</span><span class="val">Contratada</span><span class="nota">Acesso SSH em ajuste; nada publicado ainda</span></div>
+  </div>
+  <p style="margin-top:14px">O estudo dos 5 painéis do Rafael, das OPIs e do e-mail de violações virou a especificação funcional. A base do portal foi adiantada (login, perfis e cadastro de usuários eram da Etapa 2). O que falta para fechar o Marco 1 depende de acessos e respostas da TIC, listados no fim.</p>
+</section>
+
+<section>
+  <h2>1. Arquitetura</h2>
+  <div class="arq"><pre>Internet ─HTTPS─► Caddy ─┬─ /api/* ──► n8n (adaptador: autoriza, chama o banco, responde)
+                         └─ /*     ──► Angular (TV da central, computador, celular)
+n8n ──► PostgreSQL 17 + PostGIS (regras, auditoria, 12 meses de eventos)
+n8n ──► Autotrac · Moovsec · API do Claude (conta da TIC)</pre></div>
+  <h3>Decisões (no repositório, docs/decisoes)</h3>
+  <ul>
+    <li><b>001 · PostgreSQL 17 + PostGIS</b>, sem pgvector por enquanto. Partição mensal com chave estrangeira para 12 meses de posições e alarmes; contas de tempo e distância nativas. Alternativas descartadas: MySQL (partição sem FK) e SQL Server (Express limitado a 10 GB; Standard exige licença).</li>
+    <li><b>002 · Arquitetura clean</b>: regras e casos de uso no banco (funções com auditoria na mesma transação), n8n só como adaptador, Angular em camadas por tela (domínio, dados, estado, páginas).</li>
+    <li><b>IA só onde há imagem ou julgamento</b>: triagem de alarmes (modelo pequeno, maior só em baixa confiança) e OPI. Contagens, jornada, velocidade e correlação ficam no motor de regras, sem IA.</li>
+    <li><b>Vídeo nunca na VPS</b>: link e 3 a 5 fotos por evento.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. O que já está pronto</h2>
+  <div class="tab"><table>
+    <thead><tr><th>Item</th><th>Situação</th><th>Como foi conferido</th></tr></thead>
+    <tbody>
+      <tr><td>Banco: 39 tabelas em 6 schemas, partições mensais, auditoria só inclusão, formulário FFRO 005 rev5 (42 itens) e 38 parâmetros do roteiro</td><td><span class="selo s-ok">Pronto</span></td><td>3 conjuntos de testes automáticos</td></tr>
+      <tr><td>Login com sessão por cookie, CSRF, bloqueio após 5 erros, 6 perfis com 17 permissões</td><td><span class="selo s-ok">Pronto</span></td><td>Testes SQL, rotas e tela</td></tr>
+      <tr><td>Admin · Usuários e perfis: cadastrar, link de senha de 24 h, criar senha, desativar, encerrar acessos</td><td><span class="selo s-ok">Pronto</span></td><td>22 verificações nas rotas + fluxo na tela</td></tr>
+      <tr><td>Início por perfil e menu por permissão</td><td><span class="selo s-at">Dados fictícios</span></td><td>Liga quando houver ingestão</td></tr>
+      <tr><td>Protótipos aprovados: login, início, Admin</td><td><span class="selo s-ok">Aprovado</span></td><td>Canvas de layout</td></tr>
+      <tr><td>Publicação na VPS (HTTPS, backup diário, restauração testada)</td><td><span class="selo s-pe">Pendente</span></td><td>Acesso SSH em ajuste</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>3. Bill of Material</h2>
+  <p>Contas em nome da TIC, com acesso da MX Midas revogável. Valores a confirmar na contratação; o custo de IA sai da prova técnica.</p>
+  <div class="tab"><table>
+    <thead><tr><th>Item</th><th>Especificação</th><th>Titular</th><th>Custo</th></tr></thead>
+    <tbody>
+      <tr><td>VPS Hostinger</td><td>KVM 2 ou maior (2 vCPU, 8 GB RAM, 100 GB NVMe), Ubuntu, data center no Brasil</td><td>TIC <small>(confirmar: hoje contratada por [quem])</small></td><td class="num">[valor/mês]</td></tr>
+      <tr><td>Backup fora da VPS</td><td>Cópia diária cifrada do banco e dos workflows, 12 meses</td><td>TIC</td><td class="num">[valor/mês]</td></tr>
+      <tr><td>Subdomínio</td><td>Ex.: painel.tic.com.br, registro A apontando para a VPS</td><td>TIC (Flávio)</td><td class="num">sem custo</td></tr>
+      <tr><td>API do Claude</td><td>Conta da TIC; teto mensal com alerta antes de atingir</td><td>TIC (André define o teto)</td><td class="num">[a medir]</td></tr>
+      <tr><td>Software</td><td>PostgreSQL, PostGIS, n8n, Caddy, Angular: licenças livres</td><td>—</td><td class="num">sem custo</td></tr>
+      <tr><td>Rodopar / Datapar (opcional)</td><td>Leitura do SQL do ERP por chamado; horas adicionais</td><td>A aprovar</td><td class="num">[proposta do Michael]</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>4. Plano da prova técnica (20/11 a 04/12)</h2>
+  <div class="tab"><table>
+    <thead><tr><th>Prova</th><th>Critério de sucesso</th><th>Depende de</th></tr></thead>
+    <tbody>
+      <tr><td>Autotrac: dados</td><td>Busca incremental de posição, eventos (freada, força G), macros e motorista logado, sem repetir o que já foi buscado; medir atraso celular × satélite</td><td>Documentação e credenciais de teste (Flávio, 25/11)</td></tr>
+      <tr><td>Autotrac: ações</td><td>Mensagem no terminal e sirene acionadas num caminhão de teste, com confirmação</td><td>Veículo de teste com sirene habilitada</td></tr>
+      <tr><td>Moovsec</td><td>Alarme chegando ao banco com placa, horário e link do clipe; decisão escrita do caminho (API Intelbras, servidor local ou e-mail + portal)</td><td>Resposta da Intelbras ou firewall para o IP da VPS (Flávio, 25/11); export CSV (Rafael, 25/11)</td></tr>
+      <tr><td>Correlação</td><td>Desvio de relógio Autotrac × Moovsec medido em eventos conhecidos; tolerância da janela definida</td><td>Export de alertas Autotrac do mesmo dia do export Moovsec (Rafael)</td></tr>
+      <tr><td>Custo de IA</td><td>Custo médio por alarme triado e por OPI, com fotos reais; projeção mensal com o volume filtrado</td><td>Amostra de alarmes e vídeos (Natanael, 27/11)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>5. Decisões que preciso do Michael</h2>
+  <div class="lista-p">
+    <div class="pergunta"><span class="n">1</span><div><p><b>Torre e Jornada Ipiranga dependem do Datapar</b>, que está nas horas adicionais. Sem Datapar, entra só a Jornada TIC (Autotrac). A Torre pode rodar com previsão só pela Autotrac, sem agenda. Qual caminho?</p></div></div>
+    <div class="pergunta"><span class="n">2</span><div><p><b>Limites por operação.</b> Os painéis usam limites diferentes (Jornada TIC 10/12/13 h; Ipiranga 10 h/dia e 60 h/semana; roteiro 8 + 2). Proposta: parâmetros com escopo por operação. De acordo?</p></div></div>
+    <div class="pergunta"><span class="n">3</span><div><p><b>Tratativas de jornada</b> que hoje estão no artefato do Claude do Rafael: migrar ou começar do zero?</p></div></div>
+    <div class="pergunta"><span class="n">4</span><div><p><b>OPI:</b> confirmar o FFRO 005 rev5 (sem item 36) e a proposta de quais itens a IA avalia por vídeo e quais ficam com o sistema ou com o avaliador.</p></div></div>
+    <div class="pergunta"><span class="n">5</span><div><p><b>Operações oficiais</b> (Viagem, Entrega Ipiranga, OPASC Itajaí/Biguaçu/Guaramirim, Araucária…) e quem vê qual.</p></div></div>
+    <div class="pergunta"><span class="n">6</span><div><p><b>Sessão:</b> cai após 12 h sem uso e dura até 7 dias. Serve para a TV da central, que fica sempre ligada?</p></div></div>
+    <div class="pergunta"><span class="n">7</span><div><p><b>Link de senha:</b> o admin copia e manda (como está) ou o portal envia por e-mail de uma conta da TIC?</p></div></div>
+    <div class="pergunta"><span class="n">8</span><div><p><b>Resumo de violações por e-mail</b> (Natanael) continua ou o cockpit substitui?</p></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>6. Pendências da TIC</h2>
+  <div class="tab"><table>
+    <thead><tr><th>Item</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr></thead>
+    <tbody>
+      <tr><td>Documentação e credenciais de teste da API Autotrac</td><td>Flávio</td><td class="num">25/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>Resposta da Intelbras sobre API do Moovsec, ou firewall liberado para o IP da VPS</td><td>Flávio</td><td class="num">25/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>Subdomínio no tic.com.br apontando para a VPS</td><td>Flávio</td><td class="num">27/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>Export CSV do Moovsec e export de alertas Autotrac do mesmo dia</td><td>Rafael</td><td class="num">25/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>validacao-alertas-tic.html e vídeo de uso dos painéis</td><td>Rafael / André</td><td class="num">24/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>OPIs preenchidas e vídeos de 15 min no SharePoint</td><td>Natanael</td><td class="num">27/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>Teto mensal de consumo de IA</td><td>André</td><td class="num">27/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>Lista de usuários (nome, e-mail, perfil, operação) e logo da TIC</td><td>TIC</td><td class="num">27/11</td><td><span class="selo s-pe">Pendente</span></td></tr>
+      <tr><td>Retenção de evidências</td><td>André</td><td class="num">17/11</td><td><span class="selo s-ok">12 meses</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>7. Riscos</h2>
+  <ul>
+    <li><b>Moovsec sem API pronta:</b> se a Intelbras não abrir, o plano B (e-mail + portal) atrasa a imagem no alerta. Decisão por escrito neste marco.</li>
+    <li><b>Prazo da prova técnica:</b> com documentação e acessos só em 25/11, sobram 2 dias úteis até o Marco 1. Os achados podem vir parciais em 27/11 e completos em 04/12.</li>
+    <li><b>Sirene:</b> precisa estar habilitada no veículo de teste.</li>
+    <li><b>Custo de IA:</b> controlado por filtro antes da IA, modelo pequeno por padrão, sem reanálise e teto com alerta.</li>
+    <li><b>Escopo:</b> Torre e Jornada Ipiranga ficam presas ao Datapar até a decisão 1.</li>
+  </ul>
+</section>
+
+<footer>Detalhes técnicos no repositório do projeto: docs/plano.md, docs/estudo-paineis.md, docs/decisoes/, docs/specs/.</footer>
+</div>
