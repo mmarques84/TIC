@@ -1,0 +1,6 @@
+# Scripts e SQL rodam no Linux (Docker/VPS) e têm checksum registrado: sempre LF.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
