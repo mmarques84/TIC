@@ -1,0 +1,199 @@
+<title>TIC Painel Digital · Andamento</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: linha do tempo do projeto em camadas (estudo → decisões → banco → backend → telas → próximos), com o mapa da arquitetura no topo */
+:root {
+  --bg: #f4f6f9; --papel: #ffffff; --fg: #18212e; --fg2: #556275; --linha: #d9e0e9;
+  --marinho: #13294b; --ouro: #c98a0c; --ok: #17663f; --ok-bg: #e7f6ee; --at: #7a4b00; --at-bg: #fff4db; --pe: #9f1d1d; --pe-bg: #fdecec; --az-bg: #eaf1fb;
+  --display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; --texto: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1520; --papel: #151f2d; --fg: #e4eaf2; --fg2: #9aa8ba; --linha: #2a3748;
+  --marinho: #9db9e6; --ouro: #e8b04a; --ok: #6fd3a0; --ok-bg: #12301f; --at: #f0c068; --at-bg: #33270f; --pe: #ff8f8f; --pe-bg: #3a1616; --az-bg: #172a45; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1520; --papel: #151f2d; --fg: #e4eaf2; --fg2: #9aa8ba; --linha: #2a3748;
+  --marinho: #9db9e6; --ouro: #e8b04a; --ok: #6fd3a0; --ok-bg: #12301f; --at: #f0c068; --at-bg: #33270f; --pe: #ff8f8f; --pe-bg: #3a1616; --az-bg: #172a45; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 400 15px/1.6 var(--texto); }
+.folha { max-width: 980px; margin: 0 auto; padding-block: 36px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 34px; }
+header { display: flex; flex-direction: column; gap: 8px; }
+.olho { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg2); }
+h1 { margin: 0; font: 700 34px/1.15 var(--display); color: var(--marinho); text-wrap: balance; }
+h2 { margin: 0 0 14px; font: 700 21px/1.25 var(--display); color: var(--marinho); }
+p { margin: 0 0 10px; max-width: 72ch; }
+.lead { font-size: 17px; color: var(--fg2); }
+.placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.num { background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 12px 14px; }
+.num b { display: block; font: 700 26px/1.1 var(--display); color: var(--marinho); font-variant-numeric: tabular-nums; }
+.num span { font-size: 13px; color: var(--fg2); }
+.camadas { display: flex; flex-direction: column; gap: 8px; }
+.camada { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; align-items: start; background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 12px 16px; }
+.camada .nome { font: 700 15px var(--display); color: var(--marinho); }
+.camada .nome small { display: block; font: 500 12px var(--texto); color: var(--fg2); margin-top: 2px; }
+.camada .itens { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 13px; padding: 3px 10px; border-radius: 12px; background: var(--az-bg); color: var(--fg); white-space: nowrap; }
+.etapas { display: flex; flex-direction: column; gap: 14px; }
+.etapa { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 14px; }
+.marco { width: 14px; height: 14px; border-radius: 7px; background: var(--ok); margin-top: 6px; position: relative; }
+.etapa:not(:last-child) .marco::after { content: ""; position: absolute; left: 6px; top: 16px; width: 2px; height: calc(100% + 400px); background: var(--linha); z-index: -1; }
+.etapas { overflow: hidden; }
+.card { background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 14px 18px; min-width: 0; }
+.card h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.card ul { margin: 6px 0 0; padding-left: 18px; } .card li { margin: 3px 0; }
+.card .porque { font-size: 14px; color: var(--fg2); margin: 8px 0 0; }
+.selo { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.s-ok { background: var(--ok-bg); color: var(--ok); } .s-at { background: var(--at-bg); color: var(--at); } .s-pe { background: var(--pe-bg); color: var(--pe); }
+.tab { overflow-x: auto; border: 1px solid var(--linha); border-radius: 10px; background: var(--papel); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--fg2); padding: 10px 14px; border-bottom: 1px solid var(--linha); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+code { font: 13px ui-monospace, Consolas, monospace; background: color-mix(in srgb, var(--papel) 80%, var(--linha)); padding: 1px 5px; border-radius: 4px; }
+a { color: var(--marinho); }
+.fluxo { background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 16px; overflow-x: auto; }
+.fluxo pre { margin: 0; font: 13px/1.6 ui-monospace, Consolas, monospace; }
+@media (max-width: 620px) { .camada { grid-template-columns: 1fr; gap: 6px; } }
+</style>
+
+<div class="folha">
+<header>
+  <span class="olho">TIC Transportes · MX Midas · situação em 20/11/2026</span>
+  <h1>O que já foi feito no TIC Painel Digital</h1>
+  <p class="lead">Do estudo dos painéis do Rafael até o portal com login e cadastro de usuários rodando no seu computador, num só dia de trabalho.</p>
+</header>
+
+<section>
+  <div class="placar">
+    <div class="num"><b>40</b><span>tabelas no banco, em 6 schemas</span></div>
+    <div class="num"><b>39</b><span>funções de regra (sp_, fn_, job_)</span></div>
+    <div class="num"><b>3</b><span>workflows no n8n</span></div>
+    <div class="num"><b>3</b><span>specs (2 implementadas)</span></div>
+    <div class="num"><b>6</b><span>protótipos de tela aprovados</span></div>
+    <div class="num"><b>7</b><span>commits no GitHub</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Como o portal é montado</h2>
+  <p>Cada camada só conhece a de dentro. A regra de negócio mora no banco; o n8n só recebe o pedido, confere quem é a pessoa e chama o banco; a tela só mostra e pede.</p>
+  <div class="camadas">
+    <div class="camada"><span class="nome">Telas<small>Angular</small></span><div class="itens"><span class="chip">Login</span><span class="chip">Esqueci / criar senha</span><span class="chip">Início por perfil</span><span class="chip">Usuários e perfis</span><span class="chip">Menu por permissão</span></div></div>
+    <div class="camada"><span class="nome">Porta de entrada<small>Caddy</small></span><div class="itens"><span class="chip">HTTPS</span><span class="chip">/api → n8n</span><span class="chip">Cookies de sessão</span></div></div>
+    <div class="camada"><span class="nome">Adaptador<small>n8n</small></span><div class="itens"><span class="chip">sub-autorizar</span><span class="chip">api-auth</span><span class="chip">api-admin</span></div></div>
+    <div class="camada"><span class="nome">Regras<small>funções no banco</small></span><div class="itens"><span class="chip">Login e sessão</span><span class="chip">Usuários e links</span><span class="chip">Parâmetros por operação</span><span class="chip">Nível de velocidade</span><span class="chip">Percentual da OPI</span></div></div>
+    <div class="camada"><span class="nome">Dados<small>PostgreSQL + PostGIS</small></span><div class="itens"><span class="chip">acesso</span><span class="chip">cadastro</span><span class="chip">bruto (por mês)</span><span class="chip">derivado</span><span class="chip">ia</span><span class="chip">controle</span></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>O caminho até aqui</h2>
+  <div class="etapas">
+    <div class="etapa"><span class="marco"></span><div class="card">
+      <h3>1. Estudo do que a TIC já usa <span class="selo s-ok">Feito</span></h3>
+      <ul>
+        <li>Roteiro do Michael, 3 OPIs, o e-mail de violações do Natanael e os 5 painéis HTML do Rafael (Jornada TIC, Jornada Ipiranga, Torre, Entregas OPASC e Araucária).</li>
+        <li>Achados: os painéis são retratos sem banco; a jornada é calculada 3 vezes de 3 jeitos; a Torre e a Jornada Ipiranga dependem do Datapar; o formulário OPI não tem item 36 e tem itens em que "SIM" é ruim; o percentual da OPI era digitado com erro.</li>
+      </ul>
+      <p class="porque">Os painéis viraram a especificação funcional: nada foi inventado. Em <code>docs/estudo-paineis.md</code>.</p>
+    </div></div>
+
+    <div class="etapa"><span class="marco"></span><div class="card">
+      <h3>2. Plano e decisões <span class="selo s-ok">Feito</span></h3>
+      <ul>
+        <li>Plano com banco, agentes de IA (só 2: triagem de alarmes e OPI), skills e 16 specs na ordem dos marcos.</li>
+        <li>Decisão 001: <b>PostgreSQL + PostGIS</b> (partição mensal com chave estrangeira, contas de tempo e distância; SQL Server Express não cabe 12 meses).</li>
+        <li>Decisão 002: <b>arquitetura clean</b> com regra no banco e n8n como adaptador.</li>
+        <li>Skills do projeto: <code>pendencias</code>, <code>nova-funcionalidade</code>, <code>tela-tic</code>, <code>regras-jornada</code>.</li>
+      </ul>
+    </div></div>
+
+    <div class="etapa"><span class="marco"></span><div class="card">
+      <h3>3. Banco de dados <span class="selo s-ok">Feito</span></h3>
+      <ul>
+        <li>8 migrations só aditivas: acesso, cadastro, bruto (posição, eventos e alarmes particionados por mês), derivado (jornada, evento, alerta, ação, tratativa), IA (triagem, OPI, consumo) e controle (parâmetros, auditoria, fila de ações).</li>
+        <li>Proteções no próprio banco: auditoria que não aceita alteração, conjunto cavalo + semi sem sobreposição, placa no padrão, parâmetro vigente único.</li>
+        <li>Carga inicial: 6 perfis, 17 permissões, FFRO 005 rev5 (42 itens) e 38 parâmetros do roteiro.</li>
+      </ul>
+      <p class="porque">Testado do zero num banco separado a cada mudança (<code>scripts/testar-sql.sh</code>).</p>
+    </div></div>
+
+    <div class="etapa"><span class="marco"></span><div class="card">
+      <h3>4. Protótipos e front <span class="selo s-ok">Feito</span></h3>
+      <ul>
+        <li>Canvas com 6 telas aprovadas: login, erro, esqueci, criar senha, início por perfil e Admin.</li>
+        <li>Front Angular em camadas por tela (domínio, dados, estado, páginas), com tokens de cor da TIC e dados fictícios onde a API ainda não existe.</li>
+      </ul>
+    </div></div>
+
+    <div class="etapa"><span class="marco"></span><div class="card">
+      <h3>5. Login real <span class="selo s-ok">Feito</span></h3>
+      <ul>
+        <li>Senha só como hash PBKDF2; sessão por cookie seguro; proteção contra CSRF; bloqueio de 15 min após 5 erros; tudo na auditoria.</li>
+        <li>Seu admin: <code>admin@mxmidas.com</code> (no banco local).</li>
+      </ul>
+    </div></div>
+
+    <div class="etapa"><span class="marco"></span><div class="card">
+      <h3>6. Admin · Usuários e perfis <span class="selo s-ok">Feito</span></h3>
+      <ul>
+        <li>Cadastrar, gerar link de senha (24 h, aparece uma vez), a pessoa cria a senha e entra, trocar perfil (derruba os acessos), desativar, ver e encerrar sessões.</li>
+        <li>Ninguém desativa a si mesmo; o portal nunca fica sem admin.</li>
+      </ul>
+      <p class="porque">22 verificações automáticas nas rotas e o fluxo inteiro conferido na tela.</p>
+    </div></div>
+
+    <div class="etapa"><span class="marco"></span><div class="card">
+      <h3>7. Marco 1 <span class="selo s-ok">Documento pronto</span></h3>
+      <ul>
+        <li>Documento para o Michael: arquitetura, Bill of Material, plano da prova técnica, 8 decisões e pendências da TIC.</li>
+        <li>Mensagens de cobrança para Flávio, Rafael, Natanael e André.</li>
+      </ul>
+    </div></div>
+
+    <div class="etapa"><span class="marco" style="background: var(--ouro)"></span><div class="card">
+      <h3>8. Motor de jornada <span class="selo s-ok">Feito no banco</span></h3>
+      <p>Transforma as macros e as posições em jornadas calculadas pela Lei 13.103: horas, refeição, direção contínua, interjornada, DSR e paradas, com limites por operação. 24 regras, 11 cenários de teste passando. Falta ligar à ingestão da Autotrac e fazer a tela.</p>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <h2>O que funciona hoje, no seu computador</h2>
+  <div class="fluxo"><pre>http://127.0.0.1:4317  →  entrar com admin@mxmidas.com
+  → Início (dados fictícios)
+  → Administração › Usuários e perfis
+      + Novo usuário → link de senha → a pessoa cria a senha → entra com o menu do perfil dela</pre></div>
+</section>
+
+<section>
+  <h2>O que ainda falta</h2>
+  <div class="tab"><table>
+    <thead><tr><th>Item</th><th>Situação</th><th>Depende de</th></tr></thead>
+    <tbody>
+      <tr><td>Publicar na VPS com HTTPS e backup</td><td><span class="selo s-pe">Travado</span></td><td>Diagnóstico do SSH (você)</td></tr>
+      <tr><td>Prova técnica Autotrac (dados, mensagem, sirene)</td><td><span class="selo s-pe">Aguardando</span></td><td>Documentação e credenciais (Flávio)</td></tr>
+      <tr><td>Caminho e parser do Moovsec</td><td><span class="selo s-pe">Aguardando</span></td><td>Intelbras / firewall (Flávio), CSV (Rafael)</td></tr>
+      <tr><td>Motor de jornada: códigos de macro da Autotrac e tela</td><td><span class="selo s-at">Banco pronto</span></td><td>Documentação (Flávio); spec da tela</td></tr>
+      <tr><td>Central de alertas (tela do Marco 2)</td><td><span class="selo s-at">Próxima</span></td><td>Spec e layout</td></tr>
+      <tr><td>Cadastros de operação, veículo e motorista</td><td><span class="selo s-at">Próxima</span></td><td>Lista de operações (TIC)</td></tr>
+      <tr><td>Esqueci a senha</td><td><span class="selo s-at">Decisão</span></td><td>Link por e-mail ou pelo admin (Michael)</td></tr>
+      <tr><td>Logo e cores oficiais</td><td><span class="selo s-at">Aguardando</span></td><td>TIC</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Onde está cada coisa</h2>
+  <div class="tab"><table>
+    <thead><tr><th>O quê</th><th>Onde</th></tr></thead>
+    <tbody>
+      <tr><td>Código e documentos</td><td><a href="https://github.com/mmarques84/TIC">github.com/mmarques84/TIC</a> (local: <code>E:\ProjetoParticular\TIC</code>)</td></tr>
+      <tr><td>Protótipos das telas</td><td><a href="https://claude.ai/artifact/KpmPidbuvoLsdzGL3ouKN3">Canvas TIC Painel Digital · Login</a></td></tr>
+      <tr><td>Documento do Marco 1</td><td><a href="https://claude.ai/artifact/VbhvYjqVCWXXGqm2WpTbE6">TIC Marco 1</a></td></tr>
+      <tr><td>Specs</td><td><code>docs/specs/</code>: seguranca-acesso, admin-usuarios, motor-jornada</td></tr>
+      <tr><td>Retomar o trabalho</td><td>skill <code>pendencias</code> (estado, próximos passos e diário)</td></tr>
+      <tr><td>Material do cliente (dados reais)</td><td><code>material-cliente/</code>, fora do git</td></tr>
+    </tbody>
+  </table></div>
+</section>
+</div>

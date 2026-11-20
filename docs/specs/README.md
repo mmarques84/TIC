@@ -9,7 +9,7 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | ingestao-moovsec.md | 2 | a criar | export CSV + prova técnica |
 | correlacao.md | 2 | a criar | ingestões |
 | parametros.md | 2 | a criar | limites por operação (Michael) |
-| motor-jornada.md | 3a | a criar | skill regras-jornada |
+| [motor-jornada.md](motor-jornada.md) | 3a | implementada no banco (20/11) | skill regras-jornada; limites por operação (Michael) |
 | alertas-escalonamento.md | 3a | a criar | teste de sirene |
 | central-alertas.md | 3a | a criar | alertas, triagem |
 | triagem-ia.md | 3a | a criar | teto de custo (André) |
