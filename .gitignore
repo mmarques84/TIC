@@ -1,0 +1,18 @@
+**/node_modules/
+**/dist/
+**/.angular/
+.env
+.env.*
+!.env.example
+*.log
+backups/
+/dados/
+
+# Material do cliente (dados reais de motoristas: nomes, placas, imagens, posições) nunca vai para o git
+material-cliente/
+*.mp4
+*.mov
+*.csv
+*.xlsx
+/*.pdf
+/*.html
