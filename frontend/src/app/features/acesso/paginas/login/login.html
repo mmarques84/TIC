@@ -1,0 +1,45 @@
+<tic-painel-acesso>
+  <form class="form" (submit)="entrar($event)" novalidate>
+    <div class="cabeca">
+      <h2>Entrar</h2>
+      <p>Use o e-mail cadastrado pela TIC.</p>
+    </div>
+
+    @if (erro()) {
+      <div class="tic-aviso erro" role="alert">{{ erro() }}</div>
+    }
+
+    <div class="tic-campo">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" placeholder="nome@tic.com.br"
+             [value]="email()" (input)="email.set(valor($event))" [attr.aria-invalid]="erro() ? 'true' : null" />
+    </div>
+
+    <div class="tic-campo">
+      <div class="linha">
+        <label for="senha">Senha</label>
+        <a routerLink="/esqueci-senha">Esqueci minha senha</a>
+      </div>
+      <div class="senha">
+        <input id="senha" [type]="mostrar() ? 'text' : 'password'" autocomplete="current-password"
+               [value]="senha()" (input)="senha.set(valor($event))" [attr.aria-invalid]="erro() ? 'true' : null" />
+        <button type="button" class="olho" (click)="mostrar.set(!mostrar())"
+                [attr.aria-label]="mostrar() ? 'Ocultar senha' : 'Mostrar senha'">{{ mostrar() ? 'Ocultar' : 'Mostrar' }}</button>
+      </div>
+    </div>
+
+    <button type="submit" class="tic-botao" [disabled]="enviando()">{{ enviando() ? 'Entrando…' : 'Entrar' }}</button>
+
+    <div class="tic-aviso info">
+      <span>Acesso restrito à equipe da TIC. Cada imagem aberta fica registrada com seu nome (LGPD).</span>
+    </div>
+
+    @if (ficticio) {
+      <p class="demo">
+        Modo de desenvolvimento (dados fictícios): entre com <code>operacao&#64;exemplo.com</code>, <code>diretoria&#64;</code>,
+        <code>frotaopi&#64;</code>, <code>central&#64;</code>, <code>ti&#64;</code> ou <code>admin&#64;exemplo.com</code> e a senha
+        <code>{{ senhaFicticia }}</code>.
+      </p>
+    }
+  </form>
+</tic-painel-acesso>

@@ -1,0 +1,105 @@
+name: tic
+
+# Mesmo arquivo no computador do dev (dados fictícios) e na VPS (dados reais).
+# A diferença fica só no .env. Montagem: docs/montagem.md
+# Volumes nomeados guardam os dados. NUNCA usar "docker compose down -v".
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: tic
+      POSTGRES_USER: tic_admin
+      POSTGRES_PASSWORD: ${PG_ADMIN_SENHA:?Configure PG_ADMIN_SENHA no .env}
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "127.0.0.1:${PG_PORTA:-5433}:5432" # só loopback; na VPS, acesso por túnel SSH
+    volumes:
+      - pg_dados:/var/lib/postgresql/data
+    networks: [dados]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U tic_admin -d tic"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Aplica migrations novas e recria funções. Só roda quando chamado:
+  #   docker compose run --rm migrador
+  # Na VPS, sempre depois do backup.
+  migrador:
+    image: postgis/postgis:17-3.5
+    profiles: [migrar]
+    entrypoint: ["sh", "/tic/scripts/migrar.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: tic_admin
+      PGPASSWORD: ${PG_ADMIN_SENHA}
+      PGDATABASE: ${BANCO:-tic}
+      TIC_N8N_SENHA: ${TIC_N8N_SENHA:?Configure TIC_N8N_SENHA no .env}
+      TIC_LEITURA_SENHA: ${TIC_LEITURA_SENHA:?Configure TIC_LEITURA_SENHA no .env}
+    volumes:
+      - ./db:/tic/db:ro
+      - ./scripts:/tic/scripts:ro
+      - ./tests:/tic/tests:ro
+    networks: [dados]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  n8n:
+    image: n8nio/n8n:${N8N_VERSAO:-2.48.4}
+    profiles: [app]
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Configure N8N_ENCRYPTION_KEY no .env}
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      TZ: America/Sao_Paulo
+      WEBHOOK_URL: ${TIC_URL:-https://localhost/}
+      N8N_PROXY_HOPS: "1"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-true}
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    ports:
+      - "127.0.0.1:${N8N_PORTA:-5679}:5678" # editor só local ou por túnel SSH
+    volumes:
+      - n8n_dados:/home/node/.n8n
+      - ./prompts:/tic/prompts:ro
+    networks: [dados, web]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    profiles: [app]
+    networks: [web]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    profiles: [app]
+    environment:
+      TIC_SITE: ${TIC_SITE:-localhost}
+    ports:
+      - "${CADDY_HTTP_PORTA:-80}:80"
+      - "${CADDY_HTTPS_PORTA:-443}:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_dados:/data
+    networks: [web]
+    depends_on: [n8n, frontend]
+    restart: unless-stopped
+
+volumes:
+  pg_dados:
+  n8n_dados:
+  caddy_dados:
+
+networks:
+  dados:
+  web:

@@ -1,0 +1,41 @@
+/* Design system TIC: cores, espaços, raios e fontes. Componentes usam SÓ estas variáveis.
+   Base provisória (formulário OPI da TIC): azul-marinho + amarelo-ouro. Trocar quando chegar o manual de marca. */
+:root {
+  /* marca */
+  --tic-marinho: #13294b;
+  --tic-marinho-escuro: #0b1a30;
+  --tic-marinho-medio: #1f3a63;
+  --tic-marinho-linha: #2b4670;
+  --tic-marinho-texto-suave: #c9d4e5;
+  --tic-marinho-texto-apagado: #8fa3c0;
+  --tic-ouro: #e8a317; /* só fundo de selo, foco e destaque: nunca texto sobre branco */
+
+  /* superfícies e texto */
+  --tic-fundo: #f4f6f9;
+  --tic-superficie: #ffffff;
+  --tic-superficie-suave: #eef2f7;
+  --tic-borda: #d6dee8;
+  --tic-borda-campo: #b9c5d4;
+  --tic-texto: #1b2430;
+  --tic-texto-secundario: #5b6b7f;
+
+  /* níveis (sempre com rótulo escrito) */
+  --tic-critico-fundo: #fdecec;
+  --tic-critico-texto: #9f1d1d;
+  --tic-critico-borda: #c53030;
+  --tic-medio-fundo: #fff4db;
+  --tic-medio-texto: #7a4b00;
+  --tic-leve-fundo: #eaf1fb;
+  --tic-leve-texto: #1f4e8c;
+  --tic-ok-fundo: #e7f6ee;
+  --tic-ok-texto: #17663f;
+  --tic-neutro-fundo: #eef2f7;
+  --tic-neutro-texto: #44546a;
+
+  /* forma */
+  --tic-raio-p: 8px;
+  --tic-raio: 10px;
+  --tic-raio-g: 16px;
+  --tic-toque-min: 44px;
+  --tic-fonte: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}

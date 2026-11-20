@@ -1,0 +1,35 @@
+<div class="shell">
+  <nav class="menu" aria-label="Menu principal">
+    <div class="marca">
+      <tic-logo tamanho="p" />
+      <span>Painel Digital</span>
+    </div>
+
+    <div class="grupos">
+      @for (g of grupos(); track g.nome) {
+        <div class="grupo">
+          <div class="grupo-nome">{{ g.nome }}</div>
+          @for (it of g.itens; track it.rota) {
+            @if (it.emBreve) {
+              <span class="item em-breve" aria-disabled="true">{{ it.rotulo }} <small>fase 2</small></span>
+            } @else {
+              <a class="item" [routerLink]="it.rota" routerLinkActive="ativo" ariaCurrentWhenActive="page">{{ it.rotulo }}</a>
+            }
+          }
+        </div>
+      }
+    </div>
+
+    <div class="rodape">
+      <div class="quem">
+        <strong>{{ usuario()?.nome }}</strong>
+        <span>Perfil {{ perfil() }}</span>
+      </div>
+      <button type="button" class="sair" (click)="sair()">Sair</button>
+    </div>
+  </nav>
+
+  <main class="conteudo">
+    <router-outlet />
+  </main>
+</div>

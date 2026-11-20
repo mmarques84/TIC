@@ -1,0 +1,128 @@
+// Componentes visuais compartilhados (classes globais tic-*). Componentes Angular genéricos ficam em src/app/ui.
+
+.tic-cartao {
+  background: var(--tic-superficie);
+  border: 1px solid var(--tic-borda);
+  border-radius: 12px;
+}
+
+.tic-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  input {
+    height: 48px;
+    padding: 0 14px;
+    font: 400 16px var(--tic-fonte); // 16 px evita o zoom do iPhone
+    color: var(--tic-texto);
+    border: 1px solid var(--tic-borda-campo);
+    border-radius: var(--tic-raio);
+    background: var(--tic-superficie);
+    width: 100%;
+  }
+
+  input[aria-invalid='true'] {
+    border: 2px solid var(--tic-critico-borda);
+  }
+
+  .tic-campo-erro {
+    font-size: 13px;
+    color: var(--tic-critico-texto);
+  }
+}
+
+.tic-botao {
+  height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--tic-raio);
+  background: var(--tic-marinho);
+  color: #fff;
+  font: 600 16px var(--tic-fonte);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--tic-marinho-escuro);
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.tic-botao-secundario {
+  height: var(--tic-toque-min);
+  padding: 0 16px;
+  border: 1px solid var(--tic-borda-campo);
+  border-radius: var(--tic-raio);
+  background: var(--tic-superficie);
+  color: var(--tic-marinho);
+  font: 600 15px var(--tic-fonte);
+  cursor: pointer;
+}
+
+.tic-aviso {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--tic-raio);
+  font-size: 14px;
+  line-height: 1.5;
+
+  &.erro {
+    background: var(--tic-critico-fundo);
+    border: 1px solid #f3b8b8;
+    color: var(--tic-critico-texto);
+  }
+
+  &.info {
+    background: var(--tic-fundo);
+    color: var(--tic-texto-secundario);
+    font-size: 13px;
+  }
+}
+
+// Selo de nível/estado: cor + rótulo escrito, sempre.
+.tic-selo {
+  display: inline-flex;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.critico,
+  &.grave {
+    background: var(--tic-critico-fundo);
+    color: var(--tic-critico-texto);
+  }
+  &.medio {
+    background: var(--tic-medio-fundo);
+    color: var(--tic-medio-texto);
+  }
+  &.leve {
+    background: var(--tic-leve-fundo);
+    color: var(--tic-leve-texto);
+  }
+  &.ok {
+    background: var(--tic-ok-fundo);
+    color: var(--tic-ok-texto);
+  }
+  &.neutro {
+    background: var(--tic-neutro-fundo);
+    color: var(--tic-neutro-texto);
+  }
+}

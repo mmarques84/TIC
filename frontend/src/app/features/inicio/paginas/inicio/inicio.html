@@ -1,0 +1,76 @@
+<div class="pagina">
+  <header class="cabeca">
+    <h1>{{ titulo() }}</h1>
+    <p>
+      @if (atualizado()) { Atualizado às {{ atualizado() }} · atualiza a cada 5 s }
+    </p>
+  </header>
+
+  @if (store.carregando()) {
+    <p class="estado" role="status">Carregando o resumo…</p>
+  } @else if (store.erro()) {
+    <div class="tic-aviso erro" role="alert">{{ store.erro() }}</div>
+  } @else {
+    <section class="indicadores" aria-label="Resumo">
+      @for (i of store.indicadores(); track i.codigo) {
+        <div class="tic-cartao indicador">
+          <span class="rotulo">{{ i.rotulo }}</span>
+          <span class="valor">{{ i.valor }}</span>
+          <span class="nota" [class]="i.nivelNota ? 'nota n-' + i.nivelNota : 'nota'">{{ i.nota }}</span>
+        </div>
+      }
+    </section>
+
+    <div class="paineis" [class.so-lateral]="!store.composicao()?.alertas || !podeAlertas()">
+      @if (store.composicao()?.alertas && podeAlertas()) {
+        <section class="tic-cartao painel" aria-labelledby="t-alertas">
+          <div class="painel-cabeca">
+            <h2 id="t-alertas">Alertas que pedem ação</h2>
+            <a routerLink="/alertas">Abrir central</a>
+          </div>
+          @for (a of store.resumo()!.alertas; track a.id) {
+            <div class="linha-alerta">
+              <span class="tic-selo" [class]="'tic-selo ' + a.nivel">{{ a.rotuloNivel }}</span>
+              <div class="texto">
+                <strong>{{ a.titulo }}</strong>
+                <span>{{ a.detalhe }}</span>
+              </div>
+              <span class="quem">{{ a.placa }} · {{ a.motorista }}</span>
+              <span class="quando">{{ a.ha }}</span>
+            </div>
+          } @empty {
+            <p class="estado">Nenhum alerta aberto agora.</p>
+          }
+        </section>
+      }
+
+      @if (store.lateral(); as l) {
+        <section class="tic-cartao painel" aria-labelledby="t-lateral">
+          <div class="painel-cabeca">
+            <h2 id="t-lateral">{{ l.titulo }}</h2>
+            <a [routerLink]="l.rota">{{ l.link }}</a>
+          </div>
+          @for (s of l.linhas; track s.id) {
+            <div class="linha-simples">
+              <div class="texto">
+                <strong>{{ s.titulo }}</strong>
+                <span>{{ s.detalhe }}</span>
+              </div>
+              <span class="tic-selo" [class]="'tic-selo ' + s.nivel">{{ s.selo }}</span>
+            </div>
+          }
+        </section>
+      }
+    </div>
+
+    <footer class="integracoes" aria-label="Status das integrações">
+      @for (i of store.resumo()!.integracoes; track i.fonte) {
+        <span class="integracao">
+          <span class="ponto" [class]="'ponto ' + i.estado" aria-hidden="true"></span>
+          <strong>{{ i.fonte }}</strong>
+          <span>{{ i.texto }}</span>
+        </span>
+      }
+    </footer>
+  }
+</div>

@@ -1,0 +1,103 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  h2 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--tic-marinho);
+  }
+
+  p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--tic-texto-secundario);
+  }
+}
+
+.linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+
+  a {
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+.senha {
+  position: relative;
+
+  input {
+    padding-right: 92px;
+  }
+}
+
+.olho {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--tic-raio-p);
+  background: var(--tic-superficie-suave);
+  color: var(--tic-marinho);
+  font: 500 13px var(--tic-fonte);
+  cursor: pointer;
+}
+
+.voltar {
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.regras {
+  margin: 0;
+  padding: 12px 14px;
+  list-style: none;
+  background: var(--tic-fundo);
+  border-radius: var(--tic-raio);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tic-texto-secundario);
+
+  .ok {
+    color: var(--tic-ok-texto);
+  }
+}
+
+.texto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--tic-texto-secundario);
+}
+
+.demo {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--tic-texto-secundario);
+  border-top: 1px dashed var(--tic-borda);
+  padding-top: 14px;
+
+  code {
+    font-size: 12px;
+    background: var(--tic-superficie-suave);
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+}
