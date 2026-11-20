@@ -1,0 +1,57 @@
+# Montagem: VPS e containers
+
+Mesmo padrão do Elysium (`E:\ProjetoParticular\Elysium\docs\setup-vps-hostinger.md`), com servidor, repositório e credenciais próprios da TIC.
+
+## O que roda na VPS
+
+```
+Internet ──443──► caddy (HTTPS automático)
+                    ├── /api/*  ──► n8n:5678  (webhooks; editor do n8n NUNCA exposto)
+                    └── /*      ──► frontend:80 (Angular compilado, nginx)
+                 n8n ──► postgres:5432 (rede interna "dados", sem porta pública)
+                 n8n ──► Autotrac API, servidor Moovsec, API do Claude (saída)
+```
+
+| Container | Imagem | Para quê | Porta exposta |
+|---|---|---|---|
+| `postgres` | `postgis/postgis:17-3.5` | Banco (dados, regras, auditoria) | só `127.0.0.1:5433` (túnel SSH) |
+| `n8n` | `n8nio/n8n` (versão fixada no `.env`) | API `/api/*`, ingestões agendadas, IA | só `127.0.0.1:5678` (túnel SSH) |
+| `frontend` | build do `frontend/` (nginx) | Portal Angular | interna |
+| `caddy` | `caddy:2` | HTTPS, proxy, cabeçalhos de segurança | 80, 443 |
+| `migrador` | `postgis/postgis:17-3.5` (perfil `migrar`) | Aplica migrations e recria funções | — (só quando chamado) |
+
+Volumes nomeados: `pg_dados`, `n8n_dados`, `caddy_dados`. **Nunca `docker compose down -v`.**
+
+## Banco: como fica por dentro
+
+```
+tic (database)
+├── acesso     usuario, perfil, permissao, sessao
+├── cadastro   operacao, base, veiculo, conjunto, motorista, cliente
+├── bruto      autotrac_posicao*, autotrac_evento*, autotrac_macro, autotrac_login, moovsec_alarme*, ingestao_lote
+├── derivado   sessao_motorista, jornada, interjornada, parada, motorista_situacao, evento*, evento_frame, alerta, acao, tratativa
+├── ia         triagem, opi_modelo, opi_modelo_item, opi, opi_resposta, consumo
+└── controle   parametro, auditoria, credencial_status, fila_acao
+                                                    * particionada por mês
+```
+
+Usuários do Postgres:
+- `tic_dono`: dono das tabelas e funções (sem login).
+- `tic_n8n`: só `EXECUTE` nas `sp_*`, `job_*` e funções de ingestão; sem `SELECT/INSERT/UPDATE` direto nas tabelas.
+- `tic_leitura`: só leitura, para consultas de suporte por túnel.
+
+## Passo a passo na VPS (dia 1)
+
+1. **Acesso:** usuário `tic` com sudo e chave SSH; `PermitRootLogin no` e `PasswordAuthentication no` (arquivo próprio em `/etc/ssh/sshd_config.d/00-tic.conf`); firewall só 22, 80, 443; `unattended-upgrades` e `fail2ban`; fuso UTC.
+2. **Docker:** Engine + Compose plugin; `tic` no grupo `docker`.
+3. **Projeto:** clone em `/opt/tic` (chave de deploy somente leitura); `.env` gerado no servidor (`openssl rand -base64 32` por segredo), `chmod 600`; cópia dos segredos no cofre da TIC.
+4. **Subir:** `docker compose up -d postgres n8n frontend caddy`; conferir `docker compose ps`.
+5. **DNS:** registro A do subdomínio (ex.: `painel.tic.com.br`, pedir ao Flávio) → IP da VPS; enquanto não houver, usar o nome `srvXXXX.hstgr.cloud`.
+6. **n8n:** pelo túnel `ssh -L 5678:127.0.0.1:5678 tic@<vps>`, criar o dono com MFA; credencial Postgres com `tic_n8n`.
+7. **Banco:** `docker compose run --rm migrador` (backup antes, sempre).
+8. **Backup:** cron diário `pg_dump -Fc` + export dos workflows, cifrado, copiado para fora da VPS; snapshot semanal da Hostinger; **uma restauração testada** antes de entrar dado real.
+9. **Firewall da TIC:** passar o IP da VPS ao Flávio para liberar o servidor Moovsec.
+
+## Nunca
+
+- `docker compose down -v` · expor 5432 ou 5678 na internet · commitar `.env` · copiar `material-cliente/` para a VPS sem necessidade.

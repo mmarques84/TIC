@@ -10,6 +10,24 @@ Portal da TIC Transportes, contratado pela MX Midas. Junta Autotrac (telemetria 
 
 **Marcos:** 27/11 (arquitetura e achados da prova técnica) · 11/12 (demo câmera + freada com motorista e imagem) · 15/01 (homologação) · **29/01/2027 produção e aceite**. Pausa 24/12 a 10/01. 168 h.
 
+## Stack (decidida em 20/11/2026)
+
+- **Banco = PostgreSQL 17 + PostGIS** (decisão 001), schemas `acesso`, `cadastro`, `bruto`, `derivado`, `ia`, `controle`. Eventos particionados por mês, com FK, retenção de 12 meses.
+- **Arquitetura clean** (decisão 002): domínio e casos de uso no banco (`fn_*` puras, `sp_*` com auditoria, `job_*` de lote); **n8n só como adaptador** (webhooks `api-*`, ingestões `ing-*`, saídas `sub-*`); Angular em camadas por feature (`dominio/`, `dados/`, `estado/`, `paginas/`, `componentes/`).
+- **Front = Angular** standalone + signals, responsivo: TV da central, computador e celular.
+- **IA = API do Claude** na conta da TIC, só via `sub-claude` (registra custo em `ia.consumo`), prompts em `prompts/`.
+- **Infra = VPS Hostinger**, Docker Compose (postgres, n8n, frontend, caddy), HTTPS, backup diário fora da VPS. Montagem: `docs/montagem.md`.
+
+## Estrutura
+
+```
+db/migrations/   NNN_*.sql (aditivas)        db/funcoes/   fn_*, sp_*, job_* (recriadas a cada deploy)
+n8n/workflows/   JSON exportado              n8n/codigo/   JS dos nós Code
+prompts/         prompts dos agentes          frontend/     Angular
+tests/sql/       testes do banco              scripts/      migrar, backup, testar, publicar
+caddy/  docs/  material-cliente/ (fora do git)
+```
+
 ## Pessoas (TIC)
 
 - **André**: diretoria, dono do orçamento; maior preocupação é o custo de IA.

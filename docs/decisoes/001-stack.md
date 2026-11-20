@@ -1,19 +1,23 @@
 # 001 · PostgreSQL + funções SQL + n8n + Angular
 
-**Status:** proposta · 20/11/2026 · Marcus (validar com o Michael no Marco 1, 27/11)
+**Status:** aceita pelo Marcus · 20/11/2026 (levar ao Michael no Marco 1, 27/11)
 
-**Contexto.** O roteiro sugere "mesmo padrão do Elysium" com PostgreSQL + pgvector e eventos particionados por mês, retenção de 12 meses. Volume esperado: ~6.500 alarmes de câmera por dia, posição de 200 caminhões a cada 60 s (~290 mil linhas/dia), macros e eventos de telemetria. As regras (jornada, DSR, velocidade, correlação) são de conjunto sobre eventos. O Elysium usa MySQL + procedures + n8n + Angular.
+**Contexto.** O TIC é um projeto de **eventos com tempo e posição**: ~290 mil posições/dia (200 caminhões a cada 60 s), ~6.500 alarmes de câmera/dia, macros, jornada, correlação "quem dirigia às 06:10", raio de 1 km para descanso, 12 meses de retenção. O roteiro do Michael sugere PostgreSQL + pgvector. O Elysium usa MySQL 8.4. O Marcus usa SQL Server nos projetos grandes.
 
-**Decisão (proposta).**
-- **PostgreSQL 16**, partição mensal nativa em `autotrac_posicao`, `autotrac_evento`, `moovsec_alarme`, `evento`; descarte de partições após 12 meses (depois de exportar, se a TIC quiser).
-- **pgvector fica de fora** até haver um uso concreto.
-- Regras e escrita em **funções SQL** (`sp_*`) que recebem `p_usuario_id` e gravam `auditoria` na mesma transação, como a decisão 002 do Elysium. Motor de regras em funções de lote chamadas depois de cada ingestão.
-- **n8n** para ingestão agendada, webhooks `/api/...` e chamadas à IA (sub-workflow único que registra custo).
-- **Angular** standalone + signals, responsivo (TV, computador, celular).
-- VPS Hostinger em nome da TIC, Docker Compose, Caddy, backup diário fora da VPS.
+**Decisão.**
+- **PostgreSQL 17** (imagem `postgis/postgis`), com **PostGIS** para distância e áreas. **pgvector fica de fora** até haver uso concreto.
+- **Schemas por camada:** `cadastro`, `bruto`, `derivado`, `ia`, `acesso`, `controle` (auditoria, parâmetros, consumo).
+- Tabelas de evento **particionadas por mês** (`bruto.autotrac_posicao`, `bruto.autotrac_evento`, `bruto.moovsec_alarme`, `derivado.evento`), **com chave estrangeira** para o cadastro. Partições com mais de 12 meses são desanexadas e removidas por rotina.
+- Datas em `timestamptz` (UTC); períodos em `tstzrange` quando ajuda (sessão do motorista, jornada).
+- Regras e escrita em **funções `sp_*`** (PL/pgSQL), como a decisão 002 do Elysium: recebem `p_usuario_id`, validam, gravam e auditam na mesma transação; erro de regra com `RAISE EXCEPTION` e código em maiúsculas. Detalhe da arquitetura em clean: decisão 002.
+- **n8n** para ingestão agendada, webhooks `/api/...` e chamadas à IA. **Angular** standalone + signals, responsivo. **Caddy** com HTTPS. Tudo em Docker Compose numa VPS Hostinger.
 
-**Alternativas.** MySQL (igual ao Elysium; partição menos prática e sem vantagem aqui) · workers em Node/Python no lugar do n8n para a ingestão de 60 s (mais controle; avaliar se o n8n aguentar mal na prova técnica) · TimescaleDB (bom para série temporal, mas mais uma peça).
+**Alternativas.**
+- **MySQL 8.4** (igual ao Elysium, código reaproveitável): tabela particionada não aceita chave estrangeira; contas de tempo e espaço mais pobres; não tem schemas.
+- **SQL Server** (o que o Marcus mais usa): o Express limita o banco a 10 GB e 1,4 GB de RAM, o que não cabe em 12 meses de posições; o Standard exige licença paga pela TIC, fora do orçamento.
+- **TimescaleDB:** bom para série temporal, mas é mais uma peça; partição nativa basta.
 
 **Consequências.**
-- Procedures do Elysium não se copiam direto: mudam de MySQL para PL/pgSQL (padrão igual, sintaxe diferente).
-- A prova técnica precisa medir a ingestão a cada 60 s no n8n; se não aguentar, a ingestão sai para um worker e esta decisão é revista.
+- As funções de login, sessão, usuários e auditoria do Elysium são **reescritas** em PL/pgSQL (mesmo desenho). Estimativa: 2 a 3 dias a mais no começo.
+- O n8n conecta com usuário que só tem `EXECUTE` nas `sp_*` (sem acesso direto às tabelas).
+- A prova técnica mede a ingestão de 60 s no n8n; se não aguentar, a ingestão sai para um worker e esta decisão é revista.

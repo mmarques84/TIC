@@ -11,7 +11,8 @@ Ao retomar: leia `CLAUDE.md`, `docs/plano.md`, `docs/estudo-paineis.md` e esta l
 
 - **Etapa:** fim da 0 (setup e estudo, até 24/11) e começo da 1 (prova técnica, 20/11 a 04/12). **Marco 1 em 27/11:** arquitetura e achados da prova técnica.
 - **Feito:** repositório local criado (sem commit, sem GitHub), material do cliente em `material-cliente/` (fora do git), estudo dos 5 painéis, plano (banco, agentes, skills, specs), decisão 001 proposta.
-- **Nada no ar:** VPS, banco, n8n e GitHub ainda não existem.
+- **Stack decidida (20/11):** PostgreSQL 17 + PostGIS (decisão 001), arquitetura clean com domínio no banco e n8n como adaptador (decisão 002), Angular, Caddy. Montagem em `docs/montagem.md`. Skills `nova-funcionalidade`, `tela-tic`, `regras-jornada` criadas.
+- **VPS:** criada pelo Marcus na Hostinger (20/11); endereço, IP e titular da conta ainda não registrados aqui. Nada instalado. GitHub ainda não existe.
 
 ## Próximos passos
 

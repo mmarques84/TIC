@@ -76,6 +76,8 @@ Consequências que o projeto resolve: login manual nos portais, cota do Claude P
 
 **Ajuste manual:** planilha com NF, status manual, observação, responsável; o painel marca "Informação manual" e mostra o que a Autotrac indicava.
 
+**Só no painel Araucária** (o código é ~90% igual ao OPASC; uma base só, sem filtro de base): filtro por segmento **REDE / EMPRESA**, filtro "ainda não entregues" (Entregue e Provável contam como entregues) e faixa de alerta **"caminhão parado há mais de 30 min no cliente"** (NF em NO CLIENTE com `parado_min ≥ 30`).
+
 **Aba "Para clientes":** uma linha por produto, sem motorista nem evidência; status traduzido (Entregue/Provável → ENTREGUE; Na base → EM CARREGAMENTO; Verificar → EM ANDAMENTO); copiar tabela ou baixar imagem para mandar ao cliente.
 
 ## 6. Resumo de violações (e-mail diário do Natanael)

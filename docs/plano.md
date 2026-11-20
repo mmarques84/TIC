@@ -12,7 +12,9 @@
 6. **Resumo de violações por e-mail** (Natanael) continua existindo ou o cockpit substitui?
 7. **Operações e bases:** lista oficial (Viagem, Entrega, Ipiranga, OPASC Itajaí/Biguaçu/Guaramirim, Araucária…) e quem vê qual.
 
-## 2. Arquitetura (proposta, vira decisão 001)
+## 2. Arquitetura
+
+**Decidido em 20/11/2026:** PostgreSQL 17 + PostGIS (decisão 001) e arquitetura clean com domínio no banco e n8n como adaptador (decisão 002). A tabela abaixo é a proposta original, mantida como contexto.
 
 | Camada | Proposta | Por quê |
 |---|---|---|
