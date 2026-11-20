@@ -17,9 +17,15 @@ function lerRequisicao(item, metodo) {
   // O Caddy define X-Forwarded-Proto e X-Forwarded-For.
   const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
   const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';
+  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.
+  const origemNav = String(h.origin || '');
+  const origem = /^https?:\/\/[a-z0-9.:-]+$/i.test(origemNav)
+    ? origemNav
+    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();
   return {
     https,
     ip,
+    origem,
     userAgent: String(h['user-agent'] || '').slice(0, 300),
     metodo,
     tokenSessao: cookies[nomeCookieSessao(https)] || '',

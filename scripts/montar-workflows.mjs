@@ -13,7 +13,7 @@ const arqIds = join(raiz, 'n8n/ids.json');
 const ids = existsSync(arqIds) ? JSON.parse(readFileSync(arqIds, 'utf8')) : {};
 const uid = (chave) => (ids[chave] ??= randomUUID());
 
-const WF = { subAutorizar: 'TicSubAutorizar1', apiAuth: 'TicApiAuth000001' };
+const WF = { subAutorizar: 'TicSubAutorizar1', apiAuth: 'TicApiAuth000001', apiAdmin: 'TicApiAdmin00001' };
 const PG = { postgres: { id: 'TicPostgresN8n01', name: 'Postgres TIC (n8n)' } };
 
 const COMUM = ler('n8n/codigo/comum.js');
@@ -179,7 +179,136 @@ const sql = (no, nome, pos, query, params) =>
   liga('Logout gravar', ['Logout resposta'], ['Erro seguro']);
   liga('Logout resposta', ['Responder']);
 
+  // POST /api/auth/senha/link (anônima): o link ainda vale?
+  webhook('POST auth/senha/link', 'POST', 'auth/senha/link', [0, 1000]);
+  code(no, 'Link preparar', [220, 1000], c['Link preparar']);
+  sql(no, 'Link validar', [440, 1000], 'SELECT * FROM acesso.sp_definicao_validar($1)', '[$json.tokenHash]');
+  code(no, 'Link resposta', [660, 1000], c['Link resposta']);
+  liga('POST auth/senha/link', ['Link preparar']);
+  liga('Link preparar', ['Link validar']);
+  liga('Link validar', ['Link resposta'], ['Erro seguro']);
+  liga('Link resposta', ['Responder']);
+
+  // POST /api/auth/senha/definir (anônima): valida link → política → grava hash → já entra
+  webhook('POST auth/senha/definir', 'POST', 'auth/senha/definir', [0, 1200]);
+  code(no, 'Definir preparar', [220, 1200], c['Definir preparar']);
+  sql(no, 'Definir validar', [440, 1200], 'SELECT * FROM acesso.sp_definicao_validar($1)', '[$json.tokenHash]');
+  code(no, 'Definir conferir', [660, 1200], c['Definir conferir']);
+  no('Definir pode gravar?', 'n8n-nodes-base.if', 2.2, [880, 1200], {
+    conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, combinator: 'and',
+      conditions: [{ id: uid('cond:definir'), leftValue: '={{ $json.acao }}', rightValue: 'gravar', operator: { type: 'string', operation: 'equals' } }] },
+    options: {},
+  });
+  sql(no, 'Definir gravar', [1100, 1160], "SELECT * FROM acesso.sp_senha_definir($1, $2, NULLIF($3, '')::inet)",
+    "[$('Definir preparar').first().json.tokenHash, $json.senhaHash, $('Definir preparar').first().json.ip]");
+  sql(no, 'Definir sessao', [1320, 1160], "SELECT * FROM acesso.sp_sessao_criar($1::uuid, $2, $3, NULLIF($4, '')::inet, $5)",
+    "[$json.usuario_id, $('Definir conferir').first().json.tokenHash, $('Definir conferir').first().json.csrfHash, $('Definir preparar').first().json.ip, $('Definir preparar').first().json.userAgent]");
+  sql(no, 'Definir me', [1540, 1160], 'SELECT * FROM acesso.sp_auth_me($1::uuid)', "[$('Definir gravar').first().json.usuario_id]");
+  code(no, 'Definir resposta', [1760, 1160], c['Definir resposta']);
+  code(no, 'Definir recusa', [1100, 1300], c['Definir recusa']);
+  liga('POST auth/senha/definir', ['Definir preparar']);
+  liga('Definir preparar', ['Definir validar']);
+  liga('Definir validar', ['Definir conferir'], ['Erro seguro']);
+  liga('Definir conferir', ['Definir pode gravar?']);
+  liga('Definir pode gravar?', ['Definir gravar'], ['Definir recusa']);
+  liga('Definir gravar', ['Definir sessao'], ['Erro seguro']);
+  liga('Definir sessao', ['Definir me'], ['Erro seguro']);
+  liga('Definir me', ['Definir resposta'], ['Erro seguro']);
+  liga('Definir resposta', ['Responder']);
+  liga('Definir recusa', ['Responder']);
+
   salvar('api-auth.json', w);
+}
+
+// ---------------- api-admin (spec admin-usuarios) ----------------
+// Ids vão em ?id= ou no corpo, nunca no caminho (webhook com :param no n8n sai do padrão /api/...).
+{
+  const { w, no, liga } = novoWorkflow(WF.apiAdmin, 'api-admin');
+  const c = blocos('n8n/codigo/admin/rotas.js');
+  const webhook = (nome, metodo, caminho, pos) =>
+    no(nome, 'n8n-nodes-base.webhook', 2, pos,
+      { httpMethod: metodo, path: `api/${caminho}`, responseMode: 'responseNode', options: {} },
+      { webhookId: uid(`webhook:${caminho}:${metodo}`) });
+  const entrada = (nome, metodo, pos) => code(no, nome, pos,
+    `${COMUM}\n\nconst req = lerRequisicao($input.first().json, '${metodo}');\nreturn [{ json: { ...req, host: undefined, permissao: 'usuario.gerir' } }];`);
+  const autorizar = (nome, pos) =>
+    no(nome, 'n8n-nodes-base.executeWorkflow', 1.2, pos, {
+      source: 'database',
+      workflowId: { __rl: true, value: WF.subAutorizar, mode: 'id' },
+      workflowInputs: { mappingMode: 'defineBelow', value: {}, matchingColumns: [], schema: [], attemptToConvertTypes: false, convertFieldsToString: true },
+      options: { waitForSubWorkflow: true },
+    });
+  const seAutorizado = (nome, pos) =>
+    no(nome, 'n8n-nodes-base.if', 2.2, pos, {
+      conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, combinator: 'and',
+        conditions: [{ id: uid(`cond:${nome}`), leftValue: '={{ $json.autorizado }}', rightValue: true,
+          operator: { type: 'boolean', operation: 'true', singleValue: true } }] },
+      options: {},
+    });
+
+  no('Responder', 'n8n-nodes-base.respondToWebhook', 1.1, [1800, 600], {
+    respondWith: 'json',
+    responseBody: '={{ $json.body }}',
+    options: { responseCode: '={{ $json.status }}', responseHeaders: { entries: [
+      { name: 'Cache-Control', value: 'no-store' },
+      { name: 'X-Tic-Cookie-1', value: "={{ $json.cookies[0] || '' }}" },
+      { name: 'X-Tic-Cookie-2', value: "={{ $json.cookies[1] || '' }}" },
+    ] } },
+  });
+  code(no, 'Erro seguro', [1580, 1700], c['Erro seguro']);
+  liga('Erro seguro', ['Responder']);
+  code(no, 'Negar', [1580, 1500], c['Negar']);
+  liga('Negar', ['Responder']);
+
+  /** Webhook → entrada → sub-autorizar → se ok: [preparo] → SQL → resposta; senão Negar. */
+  const rota = (r, y) => {
+    webhook(r.webhook, r.metodo, r.caminho, [0, y]);
+    entrada(`${r.base} entrada`, r.metodo, [200, y]);
+    autorizar(`${r.base} autorizar`, [400, y]);
+    seAutorizado(`${r.base} autorizado?`, [600, y]);
+    const sqlNome = `${r.base} banco`;
+    let depoisDoIf = sqlNome;
+    if (r.preparo) {
+      code(no, r.preparo, [800, y - 40], c[r.preparo]);
+      liga(r.preparo, [sqlNome]);
+      depoisDoIf = r.preparo;
+    }
+    sql(no, sqlNome, [1000, y - 40], r.query, r.params);
+    code(no, `${r.base} resposta`, [1200, y - 40], c[`${r.base} resposta`]);
+    liga(r.webhook, [`${r.base} entrada`]);
+    liga(`${r.base} entrada`, [`${r.base} autorizar`]);
+    liga(`${r.base} autorizar`, [`${r.base} autorizado?`]);
+    liga(`${r.base} autorizado?`, [depoisDoIf], ['Negar']);
+    liga(sqlNome, [`${r.base} resposta`], ['Erro seguro']);
+    liga(`${r.base} resposta`, ['Responder']);
+  };
+  const A = (base) => `$('${base} autorizar').first().json`;
+  const E = (base) => `$('${base} entrada').first().json`;
+
+  rota({ webhook: 'GET admin/usuarios', metodo: 'GET', caminho: 'admin/usuarios', base: 'Listar',
+    query: 'SELECT * FROM acesso.sp_usuario_listar($1::uuid)', params: `[${A('Listar')}.usuarioId]` }, 0);
+  rota({ webhook: 'GET admin/perfis', metodo: 'GET', caminho: 'admin/perfis', base: 'Perfis',
+    query: 'SELECT * FROM acesso.sp_perfil_listar($1::uuid)', params: `[${A('Perfis')}.usuarioId]` }, 200);
+  rota({ webhook: 'POST admin/usuarios', metodo: 'POST', caminho: 'admin/usuarios', base: 'Criar', preparo: 'Criar preparar',
+    query: "SELECT * FROM acesso.sp_usuario_criar($1::uuid, $2, $3, $4, $5::boolean, $6::uuid[], NULLIF($7, '')::inet)",
+    params: `[${A('Criar')}.usuarioId, $json.nome, $json.email, $json.perfil, $json.todas, '{' + $json.operacoes.join(',') + '}', ${A('Criar')}.ip]` }, 400);
+  rota({ webhook: 'PATCH admin/usuarios', metodo: 'PATCH', caminho: 'admin/usuarios', base: 'Atualizar', preparo: 'Atualizar preparar',
+    query: "SELECT * FROM acesso.sp_usuario_atualizar($1::uuid, $2::uuid, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, '')::boolean, NULLIF($7, '')::boolean, NULLIF($8, '')::uuid[], NULLIF($9, '')::inet)",
+    params: `[${A('Atualizar')}.usuarioId, $json.alvo, $json.nome ?? '', $json.email ?? '', $json.perfil ?? '', $json.ativo === null ? '' : String($json.ativo), $json.todas === null ? '' : String($json.todas), $json.operacoes === null ? '' : '{' + $json.operacoes.join(',') + '}', ${A('Atualizar')}.ip]` }, 600);
+  rota({ webhook: 'POST admin/usuarios/link-senha', metodo: 'POST', caminho: 'admin/usuarios/link-senha', base: 'Link', preparo: 'Link gerar',
+    query: "SELECT * FROM acesso.sp_definicao_criar($1::uuid, $2::uuid, $3, NULLIF($4, '')::inet)",
+    params: `[${A('Link')}.usuarioId, $json.alvo, $json.tokenHash, ${A('Link')}.ip]` }, 800);
+  rota({ webhook: 'GET admin/sessoes', metodo: 'GET', caminho: 'admin/sessoes', base: 'Sessoes',
+    query: 'SELECT * FROM acesso.sp_sessao_listar($1::uuid, $2::uuid)',
+    params: `[${A('Sessoes')}.usuarioId, String(${E('Sessoes')}.query.usuario || '').slice(0, 36)]` }, 1000);
+  rota({ webhook: 'DELETE admin/sessoes', metodo: 'DELETE', caminho: 'admin/sessoes', base: 'Revogar',
+    query: "SELECT * FROM acesso.sp_sessao_revogar($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+    params: `[${A('Revogar')}.usuarioId, String(${E('Revogar')}.query.id || '').slice(0, 36), ${A('Revogar')}.ip]` }, 1200);
+  rota({ webhook: 'POST admin/usuarios/encerrar-sessoes', metodo: 'POST', caminho: 'admin/usuarios/encerrar-sessoes', base: 'Revogar todas',
+    query: "SELECT * FROM acesso.sp_sessao_revogar_todas($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+    params: `[${A('Revogar todas')}.usuarioId, String((${E('Revogar todas')}.body || {}).id || '').slice(0, 36), ${A('Revogar todas')}.ip]` }, 1400);
+
+  salvar('api-admin.json', w);
 }
 
 writeFileSync(arqIds, JSON.stringify(ids, null, 2) + '\n');

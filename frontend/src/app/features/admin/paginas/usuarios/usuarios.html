@@ -1,0 +1,172 @@
+<div class="pagina">
+  <header class="cabeca">
+    <div>
+      <h1>Usuários e perfis</h1>
+      <p>Quem entra no portal, com qual perfil e em quais operações.</p>
+    </div>
+    <button type="button" class="tic-botao" (click)="abrirNovo()">+ Novo usuário</button>
+  </header>
+
+  <div class="filtros">
+    <label class="sr-only" for="busca">Buscar</label>
+    <input id="busca" type="search" placeholder="Buscar por nome ou e-mail" [value]="store.busca()" (input)="store.busca.set(v($event))" />
+    <label for="fperfil">Perfil</label>
+    <select id="fperfil" [value]="store.filtroPerfil()" (change)="store.filtroPerfil.set(v($event))">
+      <option value="">Todos</option>
+      @for (p of store.perfis(); track p.codigo) {
+        <option [value]="p.codigo">{{ p.nome }}</option>
+      }
+    </select>
+    <span class="resumo">{{ store.resumo() }}</span>
+  </div>
+
+  @if (store.carregando()) {
+    <p class="estado" role="status">Carregando…</p>
+  } @else if (store.erroLista()) {
+    <div class="tic-aviso erro" role="alert">{{ store.erroLista() }}</div>
+  } @else {
+    <section class="tic-cartao tabela" aria-label="Lista de usuários">
+      <div class="linha titulo" aria-hidden="true">
+        <span>Pessoa</span><span>Perfil</span><span>Operações</span><span>Situação</span><span>Senha</span><span>Último acesso</span>
+      </div>
+      @for (u of store.visiveis(); track u.id) {
+        <button type="button" class="linha" [class.sel]="u.id === store.selecionadoId()" [class.inativo]="!u.ativo" (click)="store.abrir(u.id)">
+          <span class="pessoa"><b>{{ u.nome }}</b><small>{{ u.email }}</small></span>
+          <span>{{ u.perfilNome }}</span>
+          <span>{{ opTexto(u) }}</span>
+          <span><span class="tic-selo" [class.ok]="u.ativo" [class.neutro]="!u.ativo">{{ u.ativo ? 'Ativo' : 'Inativo' }}</span></span>
+          <span class="senha" [class.pendente]="!u.temSenha">{{ u.temSenha ? 'Senha criada' : 'Aguardando primeiro acesso' }}</span>
+          <span class="quando">{{ quando(u.ultimoAcesso) }}</span>
+        </button>
+      } @empty {
+        <p class="estado">Ninguém encontrado com esse filtro.</p>
+      }
+    </section>
+  }
+</div>
+
+@if (store.selecionado(); as u) {
+  <aside class="tic-gaveta" aria-label="Ficha da pessoa">
+    <div class="g-cabeca">
+      <div>
+        <h2>{{ u.nome }}</h2>
+        <span class="g-email">{{ u.email }}</span>
+        <span class="tic-selo" [class.ok]="u.ativo" [class.neutro]="!u.ativo">{{ u.ativo ? 'Ativo' : 'Inativo' }}</span>
+      </div>
+      <button type="button" class="fechar" aria-label="Fechar" (click)="store.fechar()">×</button>
+    </div>
+    <div class="abas" role="tablist">
+      <button type="button" role="tab" [attr.aria-selected]="store.aba() === 'dados'" [class.on]="store.aba() === 'dados'" (click)="store.aba.set('dados')">Dados</button>
+      <button type="button" role="tab" [attr.aria-selected]="store.aba() === 'acessos'" [class.on]="store.aba() === 'acessos'" (click)="store.verAcessos()">Acessos ({{ u.sessoesAbertas }})</button>
+    </div>
+
+    @if (store.erro() && !store.modal()) {
+      <div class="tic-aviso erro g-msg" role="alert">{{ store.erro() }}</div>
+    }
+    @if (store.aviso()) {
+      <div class="tic-aviso info g-msg" role="status">{{ store.aviso() }}</div>
+    }
+
+    @if (store.aba() === 'dados') {
+      <form class="g-corpo" (submit)="salvarFicha($event)" novalidate>
+        <div class="tic-campo"><label for="f-nome">Nome</label><input id="f-nome" [value]="fNome()" (input)="fNome.set(v($event))" /></div>
+        <div class="tic-campo"><label for="f-email">E-mail</label><input id="f-email" type="email" [value]="fEmail()" (input)="fEmail.set(v($event))" /></div>
+        <div class="tic-campo">
+          <label for="f-perfil">Perfil</label>
+          <select id="f-perfil" [value]="fPerfil()" (change)="fPerfil.set(v($event))" [disabled]="u.id === euId()">
+            @for (p of store.perfis(); track p.codigo) {
+              <option [value]="p.codigo" [selected]="p.codigo === fPerfil()">{{ p.nome }}</option>
+            }
+          </select>
+        </div>
+        <p class="g-op">Operações: <b>{{ opTexto(u) }}</b> (cadastro de operações ainda não existe)</p>
+        @if (mudouPerfil()) {
+          <p class="tic-nota">Mudar o perfil encerra os acessos abertos de {{ u.nome }}.</p>
+        }
+        <div class="g-acoes">
+          <button type="submit" class="tic-botao" [disabled]="store.ocupado()">Salvar</button>
+          @if (u.ativo) {
+            <button type="button" class="tic-botao-secundario" (click)="store.gerarLink()" [disabled]="store.ocupado()">{{ u.temSenha ? 'Link de senha nova' : 'Gerar link de senha' }}</button>
+            @if (u.id !== euId()) {
+              <button type="button" class="tic-botao-perigo" (click)="store.modal.set('desativar')">Desativar</button>
+            }
+          } @else {
+            <button type="button" class="tic-botao-secundario" (click)="store.salvar({ ativo: true })" [disabled]="store.ocupado()">Reativar</button>
+          }
+        </div>
+      </form>
+    } @else {
+      <div class="g-corpo">
+        @for (s of store.sessoes(); track s.id) {
+          <div class="sessao">
+            <div><b>{{ aparelho(s.userAgent) }}</b><small>IP {{ s.ip || '—' }} · desde {{ quando(s.criadaEm) }} · último uso {{ quando(s.ultimoUsoEm) }}</small></div>
+            <button type="button" class="tic-botao-perigo" (click)="store.encerrarSessao(s.id)" [disabled]="store.ocupado()">Encerrar</button>
+          </div>
+        } @empty {
+          <p class="estado">Nenhum acesso aberto.</p>
+        }
+        @if (store.sessoes().length > 1) {
+          <button type="button" class="tic-botao-perigo" (click)="store.encerrarTodas()" [disabled]="store.ocupado()">Encerrar todos os acessos</button>
+        }
+      </div>
+    }
+  </aside>
+}
+
+@if (store.modal()) {
+  <div class="tic-veu">
+    @switch (store.modal()) {
+      @case ('novo') {
+        <form class="tic-dialogo" role="dialog" aria-labelledby="t-novo" (submit)="criar($event)" novalidate>
+          <h2 id="t-novo">Novo usuário</h2>
+          @if (store.erro()) {
+            <div class="tic-aviso erro" role="alert">{{ store.erro() }}</div>
+          }
+          <div class="tic-campo"><label for="n-nome">Nome</label><input id="n-nome" placeholder="Nome e sobrenome" [value]="nNome()" (input)="nNome.set(v($event))" /></div>
+          <div class="tic-campo"><label for="n-email">E-mail</label><input id="n-email" type="email" placeholder="nome@tic.com.br" [value]="nEmail()" (input)="nEmail.set(v($event))" /></div>
+          <div class="tic-campo">
+            <label for="n-perfil">Perfil</label>
+            <select id="n-perfil" (change)="nPerfil.set(v($event))">
+              <option value="" [selected]="!nPerfil()">Escolha…</option>
+              @for (p of store.perfis(); track p.codigo) {
+                <option [value]="p.codigo">{{ p.nome }} · {{ p.descricao }}</option>
+              }
+            </select>
+          </div>
+          <p class="texto-p">Operações: <b>Todas</b> (ainda não há operações cadastradas). A pessoa nasce sem senha: o link sai logo depois de salvar.</p>
+          <div class="acoes">
+            <button type="button" class="tic-botao-secundario" (click)="store.fecharModal()">Cancelar</button>
+            <button type="submit" class="tic-botao" [disabled]="store.ocupado()">{{ store.ocupado() ? 'Salvando…' : 'Salvar e gerar link' }}</button>
+          </div>
+        </form>
+      }
+      @case ('link') {
+        <div class="tic-dialogo" role="dialog" aria-labelledby="t-link">
+          <h2 id="t-link">Link de senha gerado</h2>
+          @if (store.link(); as l) {
+            <p class="texto-p">Mande este link para {{ store.selecionado()?.nome }} criar a senha. Ele vale até <b>{{ quando(l.expiraEm) }}</b> e só pode ser usado uma vez.</p>
+            <div class="link">
+              <input readonly aria-label="Link" [value]="l.link" />
+              <button type="button" class="tic-botao" (click)="copiar(l.link)">{{ copiado() ? 'Copiado' : 'Copiar link' }}</button>
+            </div>
+          }
+          <p class="tic-nota" role="note">Este link não aparece de novo depois de fechar. Se perder, gere outro (o anterior deixa de valer).</p>
+          <div class="acoes"><button type="button" class="tic-botao-secundario" (click)="store.fecharModal()">Fechar</button></div>
+        </div>
+      }
+      @case ('desativar') {
+        <div class="tic-dialogo" role="alertdialog" aria-labelledby="t-desat">
+          <h2 id="t-desat">Desativar {{ store.selecionado()?.nome }}?</h2>
+          @if (store.erro()) {
+            <div class="tic-aviso erro" role="alert">{{ store.erro() }}</div>
+          }
+          <p class="texto-p">Isso encerra os acessos abertos de {{ store.selecionado()?.nome }} na hora. O histórico fica guardado e dá para reativar depois.</p>
+          <div class="acoes">
+            <button type="button" class="tic-botao-secundario" (click)="store.fecharModal()">Cancelar</button>
+            <button type="button" class="tic-botao-perigo cheio" (click)="store.salvar({ ativo: false })" [disabled]="store.ocupado()">Desativar</button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+}

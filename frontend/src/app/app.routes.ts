@@ -1,9 +1,14 @@
+import { Type } from '@angular/core';
 import { Routes } from '@angular/router';
 
 import { anonimoGuard, autenticadoGuard, permissaoGuard } from './core/auth/guardas';
 import { ITENS_COM_ROTA } from './core/navegacao/navegacao';
 
 const emConstrucao = () => import('./features/em-construcao/em-construcao').then((m) => m.EmConstrucao);
+
+const TELAS_PRONTAS: Record<string, () => Promise<Type<unknown>>> = {
+  '/admin/usuarios': () => import('./features/admin/paginas/usuarios/usuarios').then((m) => m.AdminUsuarios),
+};
 
 export const routes: Routes = [
   {
@@ -34,12 +39,13 @@ export const routes: Routes = [
         title: 'Início · TIC Painel Digital',
         loadComponent: () => import('./features/inicio/paginas/inicio/inicio').then((m) => m.Inicio),
       },
+      // Telas prontas têm componente próprio; as outras abrem "Em construção" até a spec e o layout serem aprovados.
       ...ITENS_COM_ROTA.map((item) => ({
         path: item.rota.slice(1),
         canActivate: [permissaoGuard(item.permissao!)],
         title: `${item.rotulo} · TIC Painel Digital`,
         data: { titulo: item.rotulo },
-        loadComponent: emConstrucao,
+        loadComponent: TELAS_PRONTAS[item.rota] ?? emConstrucao,
       })),
       { path: 'sem-acesso', title: 'Sem acesso', loadComponent: () => import('./features/sem-acesso/sem-acesso').then((m) => m.SemAcesso) },
     ],

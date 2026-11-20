@@ -35,7 +35,8 @@ export class AuthApiHttp extends AuthApi {
     return this.http.post<Usuario>('/api/auth/senha/definir', { token, senha });
   }
   consultarLink(token: string) {
-    return this.http.get<{ email: string; perfil: Perfil; expiraEm: string }>('/api/auth/senha/link', { params: { token } });
+    // POST para o token não ficar em log de servidor nem no histórico como parâmetro de URL de API.
+    return this.http.post<{ email: string; perfil: Perfil; expiraEm: string }>('/api/auth/senha/link', { token });
   }
 }
 

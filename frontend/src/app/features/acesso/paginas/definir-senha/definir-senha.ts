@@ -75,7 +75,7 @@ export class DefinirSenha implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const l = await firstValueFrom(this.api.consultarLink(this.token() || 'ficticio'));
+      const l = await firstValueFrom(this.api.consultarLink(this.token()));
       this.email.set(l.email);
       this.perfil.set(NOME_PERFIL[l.perfil as Perfil] ?? l.perfil);
       this.expira.set(new Date(l.expiraEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));

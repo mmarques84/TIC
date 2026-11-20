@@ -94,6 +94,95 @@
   }
 }
 
+// Fundo escuro atrás de diálogo.
+.tic-veu {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 26, 48, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.tic-dialogo {
+  width: 100%;
+  max-width: 540px;
+  background: var(--tic-superficie);
+  border-radius: var(--tic-raio-g);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--tic-marinho);
+  }
+
+  .acoes {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
+// Gaveta lateral (ficha).
+.tic-gaveta {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(460px, 100vw);
+  height: 100vh;
+  background: var(--tic-superficie);
+  border-left: 1px solid var(--tic-borda);
+  box-shadow: -12px 0 32px rgba(11, 26, 48, 0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.tic-botao-perigo {
+  height: var(--tic-toque-min);
+  padding: 0 16px;
+  border: 1px solid #f3b8b8;
+  border-radius: var(--tic-raio);
+  background: var(--tic-superficie);
+  color: var(--tic-critico-texto);
+  font: 600 15px var(--tic-fonte);
+  cursor: pointer;
+
+  &.cheio {
+    background: var(--tic-critico-texto);
+    color: #fff;
+    border: 0;
+  }
+}
+
+.tic-nota {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tic-medio-texto);
+  background: var(--tic-medio-fundo);
+  padding: 10px 12px;
+  border-radius: var(--tic-raio-p);
+}
+
+.tic-campo select {
+  height: 48px;
+  padding: 0 12px;
+  font: 400 16px var(--tic-fonte);
+  border: 1px solid var(--tic-borda-campo);
+  border-radius: var(--tic-raio);
+  background: var(--tic-superficie);
+  color: var(--tic-texto);
+}
+
 // Selo de nível/estado: cor + rótulo escrito, sempre.
 .tic-selo {
   display: inline-flex;

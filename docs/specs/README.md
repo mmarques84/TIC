@@ -19,4 +19,5 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | cockpit-gerencial.md | 3b | a criar | alertas, triagem |
 | cockpit-opi.md | 3b | a criar | opi |
 | consumo-ia.md | 3b | a criar | orquestrador |
-| admin.md | 2–3b | a criar | seguranca-acesso |
+| [admin-usuarios.md](admin-usuarios.md) (Admin · Usuários e perfis) | 1–2 | implementada localmente (20/11) | seguranca-acesso |
+| admin.md (parâmetros, integrações, auditoria) | 2–3b | a criar | seguranca-acesso |

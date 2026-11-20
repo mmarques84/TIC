@@ -57,11 +57,47 @@ return resposta(200, { ok: true }, cookiesApagar({ https: a.https }));
 const a = $input.first().json;
 return resposta(a.http, { codigo: a.codigo }, a.http === 401 ? cookiesApagar({ https: a.https }) : []);
 
+// @no Link preparar
+const req = lerRequisicao($input.first().json, 'POST');
+const token = texto(req.body.token, 200);
+return [{ json: { tokenHash: token ? sha256(token) : '' } }];
+
+// @no Link resposta
+const row = linha($input.all());
+if (row.valido !== true) return resposta(400, { codigo: 'LINK_INVALIDO' });
+return resposta(200, { email: row.email, perfil: row.perfil, expiraEm: row.expira_em });
+
+// @no Definir preparar
+const req = lerRequisicao($input.first().json, 'POST');
+const token = texto(req.body.token, 200);
+return [{ json: { tokenHash: token ? sha256(token) : '', senha: texto(req.body.senha, 1024), ip: req.ip, userAgent: req.userAgent, https: req.https } }];
+
+// @no Definir conferir  [senha]
+// Política no servidor (a tela só ajuda). A senha não sai daqui em claro: segue só o hash.
+const p = $('Definir preparar').first().json;
+const link = linha($input.all());
+if (link.valido !== true) return [{ json: { acao: 'recusar', codigo: 'LINK_INVALIDO' } }];
+const recusa = recusaSenha(p.senha, link.nome, link.email);
+if (recusa) return [{ json: { acao: 'recusar', codigo: recusa } }];
+const token = tokenNovo();
+const csrf = tokenNovo();
+return [{ json: { acao: 'gravar', senhaHash: gerarHashSenha(p.senha), token, csrf, tokenHash: sha256(token), csrfHash: sha256(csrf) } }];
+
+// @no Definir recusa
+return resposta(400, { codigo: $input.first().json.codigo });
+
+// @no Definir resposta
+// Senha criada: já entra (sessão nova com os dois cookies).
+const p = $('Definir preparar').first().json;
+const c = $('Definir conferir').first().json;
+const me = linha($input.all());
+return resposta(200, me.usuario, cookiesSessao({ https: p.https }, c.token, c.csrf));
+
 // @no Erro seguro
 // Erro do banco vira resposta curta com o código do RAISE; nada de mensagem interna para fora.
 const bruto = $input.first().json || {};
 const msg = [bruto.message, bruto.error && bruto.error.message, typeof bruto.error === 'string' ? bruto.error : ''].filter(Boolean).join(' ');
-const codigos = { SEM_PERMISSAO: 403, USUARIO_INATIVO: 401, PARAMETRO_AUSENTE: 500 };
+const codigos = { SEM_PERMISSAO: 403, USUARIO_INATIVO: 401, LINK_INVALIDO: 400, PARAMETRO_AUSENTE: 500 };
 const codigo = Object.keys(codigos).find((c) => msg.includes(c));
 if (codigo === 'USUARIO_INATIVO') return resposta(401, { codigo: 'CREDENCIAIS_INVALIDAS' });
 return resposta(codigo ? codigos[codigo] : 500, { codigo: codigo || 'ERRO' });
