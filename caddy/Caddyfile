@@ -1,0 +1,50 @@
+# TIC_SITE: na VPS o domínio (HTTPS automático); no computador do dev "http://localhost".
+{$TIC_SITE} {
+	encode gzip
+
+	# API pública: /api/... -> webhook do n8n /webhook/api/...
+	# Rotas de login/sessão: as únicas que podem criar ou apagar cookies.
+	# O n8n só manda UM cabeçalho de cada nome, então o api-auth devolve os dois cookies da sessão
+	# (sessão HttpOnly + XSRF-TOKEN) em X-Tic-Cookie-1/2 e o Caddy os vira em dois Set-Cookie.
+	handle /api/auth/* {
+		rewrite * /webhook{uri}
+		reverse_proxy n8n:5678 {
+			@cookies header X-Tic-Cookie-1 *Path=/*
+			handle_response @cookies {
+				header +Set-Cookie "{rp.header.X-Tic-Cookie-1}"
+				header +Set-Cookie "{rp.header.X-Tic-Cookie-2}"
+				copy_response
+			}
+			header_down -X-Tic-Cookie-1
+			header_down -X-Tic-Cookie-2
+			header_down -Set-Cookie
+			header_down -Content-Security-Policy # o n8n manda o dele; vale o do bloco header abaixo
+		}
+	}
+
+	# Demais rotas da API: nunca mexem em cookies.
+	handle /api/* {
+		rewrite * /webhook{uri}
+		reverse_proxy n8n:5678 {
+			header_down -X-Tic-Cookie-1
+			header_down -X-Tic-Cookie-2
+			header_down -Set-Cookie
+			header_down -Content-Security-Policy # o n8n manda o dele; vale o do bloco header abaixo
+		}
+	}
+
+	# Só /api/* chega ao n8n. Editor, /rest, /webhook e /webhook-test nunca são
+	# repassados (caem no front). Editor do n8n: só por túnel SSH.
+	handle {
+		reverse_proxy frontend:80
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	}
+}

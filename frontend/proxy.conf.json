@@ -1,8 +1,7 @@
 {
   "/api": {
-    "target": "http://localhost:5679",
+    "target": "http://localhost:8088",
     "secure": false,
-    "changeOrigin": true,
-    "pathRewrite": { "^/api": "/webhook/api" }
+    "changeOrigin": true
   }
 }

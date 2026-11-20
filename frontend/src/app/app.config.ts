@@ -3,7 +3,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
-import { USAR_DADOS_FICTICIOS } from './core/config';
+import { DADOS_FICTICIOS } from './core/config';
 import { AuthApi, AuthApiFicticia, AuthApiHttp } from './core/auth/dados/auth-api';
 import { sessaoInterceptor } from './core/auth/sessao-interceptor';
 import { InicioApi, InicioApiFicticia, InicioApiHttp } from './features/inicio/dados/inicio-api';
@@ -18,7 +18,7 @@ export const appConfig: ApplicationConfig = {
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
     ),
     // Adaptadores de dados: trocar a implementação não mexe em nenhuma tela.
-    { provide: AuthApi, useClass: USAR_DADOS_FICTICIOS ? AuthApiFicticia : AuthApiHttp },
-    { provide: InicioApi, useClass: USAR_DADOS_FICTICIOS ? InicioApiFicticia : InicioApiHttp },
+    { provide: AuthApi, useClass: DADOS_FICTICIOS.auth ? AuthApiFicticia : AuthApiHttp },
+    { provide: InicioApi, useClass: DADOS_FICTICIOS.inicio ? InicioApiFicticia : InicioApiHttp },
   ],
 };

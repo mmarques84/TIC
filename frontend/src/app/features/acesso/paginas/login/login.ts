@@ -2,7 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { paraErroApi } from '../../../../core/api/erro-api';
-import { USAR_DADOS_FICTICIOS } from '../../../../core/config';
+import { DADOS_FICTICIOS } from '../../../../core/config';
 import { SENHA_FICTICIA } from '../../../../core/auth/dados/auth-api';
 import { Sessao } from '../../../../core/auth/sessao';
 import { PainelAcesso } from '../../componentes/painel-acesso/painel-acesso';
@@ -26,7 +26,7 @@ export class Login {
   readonly mostrar = signal(false);
   readonly enviando = signal(false);
   readonly erro = signal('');
-  readonly ficticio = USAR_DADOS_FICTICIOS;
+  readonly ficticio = DADOS_FICTICIOS.auth;
   readonly senhaFicticia = SENHA_FICTICIA;
 
   async entrar(ev: Event): Promise<void> {

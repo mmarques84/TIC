@@ -4,7 +4,7 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 
 | Spec | Marco | Status | Depende de |
 |---|---|---|---|
-| seguranca-acesso.md | 1 | a criar | — |
+| [seguranca-acesso.md](seguranca-acesso.md) | 1 | rascunho (login, me e logout implementados localmente) | — |
 | ingestao-autotrac.md | 2 | a criar | documentação da API (Flávio) |
 | ingestao-moovsec.md | 2 | a criar | export CSV + prova técnica |
 | correlacao.md | 2 | a criar | ingestões |
