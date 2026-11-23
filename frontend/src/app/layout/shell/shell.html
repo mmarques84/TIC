@@ -8,13 +8,24 @@
     <div class="grupos">
       @for (g of grupos(); track g.nome) {
         <div class="grupo">
-          <div class="grupo-nome">{{ g.nome }}</div>
-          @for (it of g.itens; track it.rota) {
-            @if (it.emBreve) {
-              <span class="item em-breve" aria-disabled="true">{{ it.rotulo }} <small>fase 2</small></span>
-            } @else {
-              <a class="item" [routerLink]="it.rota" routerLinkActive="ativo" ariaCurrentWhenActive="page">{{ it.rotulo }}</a>
-            }
+          @if (g.nome === 'Geral') {
+            <div class="grupo-nome fixo">{{ g.nome }}</div>
+          } @else {
+            <button type="button" class="grupo-nome" [attr.aria-expanded]="aberto(g.nome)" [attr.aria-controls]="'g-' + g.nome" (click)="alternar(g.nome)">
+              <span>{{ g.nome }}</span>
+              <svg aria-hidden="true" class="seta" [class.virada]="aberto(g.nome)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </button>
+          }
+          @if (g.nome === 'Geral' || aberto(g.nome)) {
+            <div class="itens" [id]="'g-' + g.nome">
+              @for (it of g.itens; track it.rota) {
+                @if (it.emBreve) {
+                  <span class="item em-breve" aria-disabled="true">{{ it.rotulo }} <small>fase 2</small></span>
+                } @else {
+                  <a class="item" [routerLink]="it.rota" routerLinkActive="ativo" ariaCurrentWhenActive="page">{{ it.rotulo }}</a>
+                }
+              }
+            </div>
           }
         </div>
       }

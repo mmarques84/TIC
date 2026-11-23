@@ -1,0 +1,42 @@
+<div class="tv">
+  <header>
+    <div class="marca"><tic-logo /><h1>Central de alertas</h1></div>
+    <div class="hora">
+      <span>Atualizado às {{ hora(store.ultimaOk()?.toISOString() ?? null) }}</span>
+      <b>{{ relogioTexto() }}</b>
+    </div>
+  </header>
+
+  @if (parada()) {
+    <div class="parada" role="alert">Sem atualização desde {{ store.ultimaOk() ? hora(store.ultimaOk()!.toISOString()) : 'a abertura da tela' }}. Confira a internet ou o login desta TV.</div>
+  }
+
+  @if (store.resumo(); as r) {
+    <div class="contadores">
+      <div class="c critico"><span>Crítico</span><b>{{ r.critico }}</b></div>
+      <div class="c grave"><span>Grave</span><b>{{ r.grave }}</b></div>
+      <div class="c medio"><span>Médio</span><b>{{ r.medio }}</b></div>
+      <div class="c leve"><span>Leve</span><b>{{ r.leve }}</b></div>
+      <div class="c neutro"><span>Mais antigo</span><b class="m">{{ r.maisAntigo ? ha(r.maisAntigo) : '—' }}</b></div>
+    </div>
+  }
+
+  <section class="tabela" aria-label="Fila de alertas abertos">
+    <div class="linha cab"><span>Nível</span><span>Alerta</span><span>Placa</span><span>Motorista</span><span>Local</span><span>Há</span><span>Situação</span></div>
+    @for (a of store.fila(); track a.id; let i = $index) {
+      <div class="linha" [class.par]="i % 2" [class.critico]="a.nivel === 'critico'">
+        <span class="selo" [class]="'selo ' + a.nivel">{{ nomeNivel[a.nivel] }}</span>
+        <span class="tit">{{ a.titulo }}</span>
+        <span class="placa">{{ a.placa }}</span>
+        <span>{{ a.motorista ?? 'ninguém logado' }}</span>
+        <span class="sec">{{ a.local ?? '—' }}</span>
+        <span class="num">{{ ha(a.horario) }}</span>
+        <span class="sec peq">{{ situacao(a) }}</span>
+      </div>
+    } @empty {
+      <div class="vazio">Nenhum alerta aberto.</div>
+    }
+  </section>
+
+  <footer><span>Sem fotos nesta tela. Para tratar um alerta, use o computador.</span><span>Atualiza a cada 5 s</span></footer>
+</div>

@@ -1,0 +1,1787 @@
+{
+  "id": "TicApiCentral001",
+  "name": "api-central",
+  "nodes": [
+    {
+      "id": "215d9786-0d2e-4e6e-bcf1-400577bbb138",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1800,
+        600
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.body }}",
+        "options": {
+          "responseCode": "={{ $json.status }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "X-Tic-Cookie-1",
+                "value": "={{ $json.cookies[0] || '' }}"
+              },
+              {
+                "name": "X-Tic-Cookie-2",
+                "value": "={{ $json.cookies[1] || '' }}"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "cfe1a298-21f4-4e9b-a635-1785d996f613",
+      "name": "Erro seguro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        1900
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst bruto = $input.first().json || {};\nconst msg = [bruto.message, bruto.error && bruto.error.message, typeof bruto.error === 'string' ? bruto.error : ''].filter(Boolean).join(' ');\nconst codigos = { SEM_PERMISSAO: 403, NAO_ENCONTRADO: 404, ALERTA_JA_TRATADO: 409, MOTIVO_OBRIGATORIO: 400, TEXTO_INVALIDO: 400 };\nconst codigo = Object.keys(codigos).find((c) => msg.includes(c)) || (msg.includes('invalid input syntax for type uuid') ? 'NAO_ENCONTRADO' : null);\nreturn resposta(codigo ? codigos[codigo] : 500, { codigo: codigo || 'ERRO' });"
+      }
+    },
+    {
+      "id": "930caaa2-f2d1-4f14-b0d8-780528d34777",
+      "name": "Negar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        1700
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst a = $input.first().json;\nreturn resposta(a.http, { codigo: a.codigo }, a.http === 401 ? cookiesApagar({ https: a.https }) : []);"
+      }
+    },
+    {
+      "id": "58680c41-e693-4f44-8ce7-3d1fd7d0691d",
+      "name": "GET central/alertas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/central/alertas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "c7c5269d-9eea-4f1e-81b8-1202d9892f1c"
+    },
+    {
+      "id": "d633cf5c-703a-458d-b3a6-b5c9afe38d92",
+      "name": "Listar entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'GET');\nreturn [{ json: { ...req, permissao: 'alerta.ver' } }];"
+      }
+    },
+    {
+      "id": "b537a091-a92f-42c2-8be9-594de8aa6ae6",
+      "name": "Listar autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "8c01122f-8e19-4d6c-9cd3-ec9fbc9716a0",
+      "name": "Listar autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "3f9aaa4b-45ad-41c0-9aea-223185ef0e77",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f533724d-d520-44cd-b9e6-ccaa037fea36",
+      "name": "Listar banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        -40
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_central_listar($1::uuid, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))",
+        "options": {
+          "queryReplacement": "={{ [$('Listar autorizar').first().json.usuarioId, String((($('Listar entrada').first().json.query || {}).aba) || '').slice(0, 20), String((($('Listar entrada').first().json.query || {}).nivel) || '').slice(0, 20), String((($('Listar entrada').first().json.query || {}).tipo) || '').slice(0, 40), String((($('Listar entrada').first().json.query || {}).q) || '').slice(0, 60)] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "aec9efb8-3975-4433-8e7d-56d72085c7d4",
+      "name": "Listar resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -40
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).alertas || []);"
+      }
+    },
+    {
+      "id": "c44be537-cb6e-4a01-bf06-8d64d0e2e1e9",
+      "name": "GET central/resumo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/central/resumo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "665ac1e7-2b2f-49a8-b9fb-1fb4dc583a6e"
+    },
+    {
+      "id": "df016f5c-e957-416d-b107-76885d852f2f",
+      "name": "Resumo entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'GET');\nreturn [{ json: { ...req, permissao: 'alerta.ver' } }];"
+      }
+    },
+    {
+      "id": "3ab2626d-2187-43c7-810c-44b380cd41b0",
+      "name": "Resumo autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        200
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "e8d09dd9-9931-4e4d-8790-d95d86286439",
+      "name": "Resumo autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "31e5f1de-b817-4f23-865a-502e0698fc39",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "aa29cc18-f45f-44d6-9028-0bb53e5ba1b1",
+      "name": "Resumo banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        160
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_central_resumo($1::uuid)",
+        "options": {
+          "queryReplacement": "={{ [$('Resumo autorizar').first().json.usuarioId] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "3f26400f-2fa5-4c98-bbe6-143f2f899887",
+      "name": "Resumo resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).resumo || {});"
+      }
+    },
+    {
+      "id": "162c4755-779e-44b0-aa83-6cf7babdaa7f",
+      "name": "GET central/alerta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/central/alerta",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "898c28e9-84ae-4eaa-ac9a-f5372d57e61c"
+    },
+    {
+      "id": "052d5d21-90f1-48b5-a0b5-e205e791a9a2",
+      "name": "Detalhe entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'GET');\nreturn [{ json: { ...req, permissao: 'alerta.ver' } }];"
+      }
+    },
+    {
+      "id": "307fd8d4-1b4e-4f0b-b816-c3d2df8f7b57",
+      "name": "Detalhe autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        400
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "6fa1e94c-4c0a-474e-933a-23bddc48b39b",
+      "name": "Detalhe autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "f4e5aeb0-c350-448a-99c2-e23a6802cd8a",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a6197438-b21d-4d27-abb8-4e989b16210e",
+      "name": "Detalhe banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        360
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_alerta_detalhe($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+        "options": {
+          "queryReplacement": "={{ [$('Detalhe autorizar').first().json.usuarioId, String((($('Detalhe entrada').first().json.query || {}).id) || '').slice(0, 36), $('Detalhe autorizar').first().json.ip] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "eef8c3cf-b6dc-4e16-a5f1-04853e4d7fea",
+      "name": "Detalhe resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        360
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).alerta || {});"
+      }
+    },
+    {
+      "id": "a772c22c-5ad1-4d00-921b-7032d00773a9",
+      "name": "POST central/alerta/assumir",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        600
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/central/alerta/assumir",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "6f2de863-31a4-4779-8da2-4711a9f18871"
+    },
+    {
+      "id": "cca96ea8-8a82-4ab5-873b-764a2b8704e1",
+      "name": "Assumir entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        600
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'POST');\nreturn [{ json: { ...req, permissao: 'alerta.tratar' } }];"
+      }
+    },
+    {
+      "id": "f908860f-7b11-4d9d-af9e-cace916a3c73",
+      "name": "Assumir autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        600
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "be8c109c-a7e5-4338-8a87-9f81c315d3ed",
+      "name": "Assumir autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        600
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "35bf3763-421c-4027-9e9d-eed9789ece0b",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b41a170d-6d1d-4078-9c9c-b6103e46b76c",
+      "name": "Assumir banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        560
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_alerta_pegar($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+        "options": {
+          "queryReplacement": "={{ [$('Assumir autorizar').first().json.usuarioId, String((($('Assumir entrada').first().json.body || {}).id) || '').slice(0, 36), $('Assumir autorizar').first().json.ip] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "3cc3093f-5bda-4aab-9be3-7eb08f2b3b1c",
+      "name": "Assumir resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        560
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).alerta || {});"
+      }
+    },
+    {
+      "id": "80bc08dc-b47c-4413-82b3-f0805e4db006",
+      "name": "POST central/alerta/confirmar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        800
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/central/alerta/confirmar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "768ed3e9-1381-48bd-b4cb-f05660c2bce4"
+    },
+    {
+      "id": "986dcfa0-a54b-4c30-b14c-ccc3bab4bb1c",
+      "name": "Confirmar entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        800
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'POST');\nreturn [{ json: { ...req, permissao: 'alerta.tratar' } }];"
+      }
+    },
+    {
+      "id": "1ca31eb2-1be2-4796-b01e-596048a62cb9",
+      "name": "Confirmar autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        800
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "a3513fc0-f849-4c84-bf89-8f802e9c2e97",
+      "name": "Confirmar autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        800
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "06da10e5-8e46-4d7c-8659-620ff2912796",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e3ffa93c-fdde-42d4-9c36-06471728e231",
+      "name": "Confirmar banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        760
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_alerta_confirmar($1::uuid, $2::uuid, NULLIF($3, ''), NULLIF($4, '')::inet)",
+        "options": {
+          "queryReplacement": "={{ [$('Confirmar autorizar').first().json.usuarioId, String((($('Confirmar entrada').first().json.body || {}).id) || '').slice(0, 36), String((($('Confirmar entrada').first().json.body || {}).observacao) || '').slice(0, 1000), $('Confirmar autorizar').first().json.ip] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "06b33a2e-b80e-433f-9e38-3223d8326d21",
+      "name": "Confirmar resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        760
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).alerta || {});"
+      }
+    },
+    {
+      "id": "f2a225b6-f304-4de2-9ac6-bb1aeb85e37d",
+      "name": "POST central/alerta/falso",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1000
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/central/alerta/falso",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "73916300-76eb-4914-9c4d-447806528d48"
+    },
+    {
+      "id": "a603cbc3-dc5e-4d0a-be91-eae99c2d3fd9",
+      "name": "Falso entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'POST');\nreturn [{ json: { ...req, permissao: 'alerta.tratar' } }];"
+      }
+    },
+    {
+      "id": "650aed2c-1ccd-4b78-abb3-2ac1a7394929",
+      "name": "Falso autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        1000
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "b8b071cd-60ab-4d0e-8794-a35ccb525445",
+      "name": "Falso autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        1000
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "3ec6ebd1-5301-44ad-b1da-2d8ff3a0cec3",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dc63e6b9-c524-4dbe-8971-01ba58049a4d",
+      "name": "Falso banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        960
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_alerta_falso($1::uuid, $2::uuid, $3, NULLIF($4, ''), NULLIF($5, '')::inet)",
+        "options": {
+          "queryReplacement": "={{ [$('Falso autorizar').first().json.usuarioId, String((($('Falso entrada').first().json.body || {}).id) || '').slice(0, 36), String((($('Falso entrada').first().json.body || {}).motivo) || '').slice(0, 30), String((($('Falso entrada').first().json.body || {}).observacao) || '').slice(0, 1000), $('Falso autorizar').first().json.ip] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "d5a6c1af-b3bd-4f82-822a-ab26284b58ed",
+      "name": "Falso resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        960
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).alerta || {});"
+      }
+    },
+    {
+      "id": "81faf40e-2089-464f-b281-4090af01622d",
+      "name": "POST central/alerta/mensagem",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1200
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/central/alerta/mensagem",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "d73d5d95-8ffa-4af5-9df2-83519d7e41b2"
+    },
+    {
+      "id": "8283e511-6bd1-4478-bb58-7fba5d87538b",
+      "name": "Mensagem entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        1200
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'POST');\nreturn [{ json: { ...req, permissao: 'alerta.acionar' } }];"
+      }
+    },
+    {
+      "id": "b01dc0a4-d711-43a3-9b50-bd8d408329b4",
+      "name": "Mensagem autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        1200
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "fe77fc77-1352-4e93-b04c-985dd42f6f44",
+      "name": "Mensagem autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        1200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cd5aaa9e-6695-4132-99c5-5c9f88fa5b72",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5ee68be8-e7d9-4f19-b9b4-5d8a87ae92e6",
+      "name": "Mensagem banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        1160
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_alerta_mensagem($1::uuid, $2::uuid, $3, NULLIF($4, '')::inet)",
+        "options": {
+          "queryReplacement": "={{ [$('Mensagem autorizar').first().json.usuarioId, String((($('Mensagem entrada').first().json.body || {}).id) || '').slice(0, 36), String((($('Mensagem entrada').first().json.body || {}).texto) || '').slice(0, 400), $('Mensagem autorizar').first().json.ip] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "89e22925-c703-46ed-a128-ea4be1793a87",
+      "name": "Mensagem resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        1160
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).alerta || {});"
+      }
+    },
+    {
+      "id": "1c50ecbd-2cde-44c3-87c8-9d9ea3251957",
+      "name": "POST central/alerta/sirene",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1400
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/central/alerta/sirene",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "0194d196-ee00-4d1d-8a96-51e0f7effa23"
+    },
+    {
+      "id": "549d2a73-0324-4e5a-b985-c825a351652c",
+      "name": "Sirene entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        1400
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nconst req = lerRequisicao($input.first().json, 'POST');\nreturn [{ json: { ...req, permissao: 'alerta.acionar' } }];"
+      }
+    },
+    {
+      "id": "8f99f045-2a82-4e80-80f4-01c9ad05285d",
+      "name": "Sirene autorizar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        1400
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "TicSubAutorizar1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "a0b0a423-542f-4e90-b467-ce12c038dfab",
+      "name": "Sirene autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        1400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "69912a4e-7898-4ec3-8e43-379863842d78",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7cfa7584-8097-4dfb-adf9-0f8aa42fe68e",
+      "name": "Sirene banco",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        850,
+        1360
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM derivado.sp_alerta_sirene($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+        "options": {
+          "queryReplacement": "={{ [$('Sirene autorizar').first().json.usuarioId, String((($('Sirene entrada').first().json.body || {}).id) || '').slice(0, 36), $('Sirene autorizar').first().json.ip] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "TicPostgresN8n01",
+          "name": "Postgres TIC (n8n)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b9f1dd4d-9bd7-4220-9fb0-3734fb86ad5a",
+      "name": "Sirene resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        1360
+      ],
+      "parameters": {
+        "jsCode": "// ---- comum.js (colado no início de todo nó Code de rota; montado por scripts/montar-workflows.mjs) ----\n// Adaptador de entrada (decisão 002): lê a requisição, prepara e responde. Nenhuma regra de negócio aqui.\n// Nunca registra corpo, senha ou token.\nconst crypto = require('crypto');\n\nfunction decodificar(v) {\n  try { return decodeURIComponent(v); } catch { return ''; }\n}\n\nfunction lerRequisicao(item, metodo) {\n  const h = item.headers || {};\n  const cookies = {};\n  for (const parte of String(h.cookie || '').split(';')) {\n    const i = parte.indexOf('=');\n    if (i > 0) cookies[parte.slice(0, i).trim()] = decodificar(parte.slice(i + 1).trim());\n  }\n  // O Caddy define X-Forwarded-Proto e X-Forwarded-For.\n  const https = String(h['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';\n  const ip = String(h['x-forwarded-for'] || '').split(',')[0].trim().slice(0, 45) || '';\n  // Endereço do portal como o navegador vê (para montar links): cabeçalho Origin, senão o host repassado pelo Caddy.\n  const origemNav = String(h.origin || '');\n  const origem = /^https?:\\/\\/[a-z0-9.:-]+$/i.test(origemNav)\n    ? origemNav\n    : (https ? 'https://' : 'http://') + String(h['x-forwarded-host'] || h.host || 'localhost').split(',')[0].trim();\n  return {\n    https,\n    ip,\n    origem,\n    userAgent: String(h['user-agent'] || '').slice(0, 300),\n    metodo,\n    tokenSessao: cookies[nomeCookieSessao(https)] || '',\n    csrfCabecalho: String(h['x-xsrf-token'] || ''),\n    body: item.body && typeof item.body === 'object' ? item.body : {},\n    query: item.query || {},\n  };\n}\n\n// Produção (HTTPS): __Host-tic com Secure. Desenvolvimento (http): tic-dev.\nfunction nomeCookieSessao(https) {\n  return https ? '__Host-tic' : 'tic-dev';\n}\n\nconst sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');\nconst tokenNovo = () => crypto.randomBytes(32).toString('base64url');\n\nfunction cookie(nome, valor, { https, httpOnly, maxAge }) {\n  const partes = [`${nome}=${valor}`, 'Path=/', 'SameSite=Lax'];\n  if (maxAge !== undefined) partes.push(`Max-Age=${maxAge}`);\n  if (https) partes.push('Secure');\n  if (httpOnly) partes.push('HttpOnly');\n  return partes.join('; ');\n}\n\n/** Cookies de uma sessão nova: sessão (HttpOnly) + XSRF-TOKEN (o Angular lê e devolve no cabeçalho). */\nfunction cookiesSessao(req, token, csrf) {\n  return [\n    cookie(nomeCookieSessao(req.https), token, { https: req.https, httpOnly: true }),\n    cookie('XSRF-TOKEN', csrf, { https: req.https, httpOnly: false }),\n  ];\n}\n\nfunction cookiesApagar(req) {\n  return [\n    cookie(nomeCookieSessao(req.https), '', { https: req.https, httpOnly: true, maxAge: 0 }),\n    cookie('XSRF-TOKEN', '', { https: req.https, httpOnly: false, maxAge: 0 }),\n  ];\n}\n\n/** Item que o nó \"Responder\" devolve: status HTTP, corpo JSON e até dois cookies. */\nfunction resposta(status, body, cookies = []) {\n  return [{ json: { status, body: body ?? {}, cookies } }];\n}\n\nconst texto = (v, max) => (typeof v === 'string' && v.length <= max ? v : '');\n\n// Nó Postgres: cada linha do resultado é um item. As funções sp_* devolvem sempre uma linha.\nconst linha = (itens) => (itens && itens[0] && itens[0].json) || {};\n// ---- fim comum.js ----\n\n\nreturn resposta(200, linha($input.all()).alerta || {});"
+      }
+    }
+  ],
+  "connections": {
+    "Erro seguro": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Negar": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET central/alertas": {
+      "main": [
+        [
+          {
+            "node": "Listar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar entrada": {
+      "main": [
+        [
+          {
+            "node": "Listar autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar autorizar": {
+      "main": [
+        [
+          {
+            "node": "Listar autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Listar banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar banco": {
+      "main": [
+        [
+          {
+            "node": "Listar resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET central/resumo": {
+      "main": [
+        [
+          {
+            "node": "Resumo entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo entrada": {
+      "main": [
+        [
+          {
+            "node": "Resumo autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo autorizar": {
+      "main": [
+        [
+          {
+            "node": "Resumo autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Resumo banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo banco": {
+      "main": [
+        [
+          {
+            "node": "Resumo resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET central/alerta": {
+      "main": [
+        [
+          {
+            "node": "Detalhe entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detalhe entrada": {
+      "main": [
+        [
+          {
+            "node": "Detalhe autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detalhe autorizar": {
+      "main": [
+        [
+          {
+            "node": "Detalhe autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detalhe autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Detalhe banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detalhe banco": {
+      "main": [
+        [
+          {
+            "node": "Detalhe resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detalhe resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST central/alerta/assumir": {
+      "main": [
+        [
+          {
+            "node": "Assumir entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assumir entrada": {
+      "main": [
+        [
+          {
+            "node": "Assumir autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assumir autorizar": {
+      "main": [
+        [
+          {
+            "node": "Assumir autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assumir autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Assumir banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assumir banco": {
+      "main": [
+        [
+          {
+            "node": "Assumir resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assumir resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST central/alerta/confirmar": {
+      "main": [
+        [
+          {
+            "node": "Confirmar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar entrada": {
+      "main": [
+        [
+          {
+            "node": "Confirmar autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar autorizar": {
+      "main": [
+        [
+          {
+            "node": "Confirmar autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Confirmar banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar banco": {
+      "main": [
+        [
+          {
+            "node": "Confirmar resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST central/alerta/falso": {
+      "main": [
+        [
+          {
+            "node": "Falso entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falso entrada": {
+      "main": [
+        [
+          {
+            "node": "Falso autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falso autorizar": {
+      "main": [
+        [
+          {
+            "node": "Falso autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falso autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Falso banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falso banco": {
+      "main": [
+        [
+          {
+            "node": "Falso resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Falso resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST central/alerta/mensagem": {
+      "main": [
+        [
+          {
+            "node": "Mensagem entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem entrada": {
+      "main": [
+        [
+          {
+            "node": "Mensagem autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem autorizar": {
+      "main": [
+        [
+          {
+            "node": "Mensagem autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Mensagem banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem banco": {
+      "main": [
+        [
+          {
+            "node": "Mensagem resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST central/alerta/sirene": {
+      "main": [
+        [
+          {
+            "node": "Sirene entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sirene entrada": {
+      "main": [
+        [
+          {
+            "node": "Sirene autorizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sirene autorizar": {
+      "main": [
+        [
+          {
+            "node": "Sirene autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sirene autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Sirene banco",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Negar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sirene banco": {
+      "main": [
+        [
+          {
+            "node": "Sirene resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Erro seguro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sirene resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

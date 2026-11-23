@@ -8,6 +8,7 @@ const emConstrucao = () => import('./features/em-construcao/em-construcao').then
 
 const TELAS_PRONTAS: Record<string, () => Promise<Type<unknown>>> = {
   '/admin/usuarios': () => import('./features/admin/paginas/usuarios/usuarios').then((m) => m.AdminUsuarios),
+  '/alertas': () => import('./features/central/paginas/central/central').then((m) => m.Central),
 };
 
 export const routes: Routes = [
@@ -27,6 +28,13 @@ export const routes: Routes = [
     path: 'definir-senha',
     title: 'Criar senha · TIC Painel Digital',
     loadComponent: () => import('./features/acesso/paginas/definir-senha/definir-senha').then((m) => m.DefinirSenha),
+  },
+  // Central na TV da parede: tela cheia, fora do menu (spec central-alertas R19).
+  {
+    path: 'alertas/tv',
+    canActivate: [autenticadoGuard, permissaoGuard('alerta.ver')],
+    title: 'Central de alertas · TV',
+    loadComponent: () => import('./features/central/paginas/central-tv/central-tv').then((m) => m.CentralTv),
   },
   {
     path: '',

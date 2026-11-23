@@ -13,7 +13,7 @@ const arqIds = join(raiz, 'n8n/ids.json');
 const ids = existsSync(arqIds) ? JSON.parse(readFileSync(arqIds, 'utf8')) : {};
 const uid = (chave) => (ids[chave] ??= randomUUID());
 
-const WF = { subAutorizar: 'TicSubAutorizar1', apiAuth: 'TicApiAuth000001', apiAdmin: 'TicApiAdmin00001' };
+const WF = { subAutorizar: 'TicSubAutorizar1', apiAuth: 'TicApiAuth000001', apiAdmin: 'TicApiAdmin00001', apiCentral: 'TicApiCentral001' };
 const PG = { postgres: { id: 'TicPostgresN8n01', name: 'Postgres TIC (n8n)' } };
 
 const COMUM = ler('n8n/codigo/comum.js');
@@ -309,6 +309,84 @@ const sql = (no, nome, pos, query, params) =>
     params: `[${A('Revogar todas')}.usuarioId, String((${E('Revogar todas')}.body || {}).id || '').slice(0, 36), ${A('Revogar todas')}.ip]` }, 1400);
 
   salvar('api-admin.json', w);
+}
+
+// ---------------- api-central (spec central-alertas) ----------------
+{
+  const { w, no, liga } = novoWorkflow(WF.apiCentral, 'api-central');
+  const c = blocos('n8n/codigo/central/rotas.js');
+  no('Responder', 'n8n-nodes-base.respondToWebhook', 1.1, [1800, 600], {
+    respondWith: 'json',
+    responseBody: '={{ $json.body }}',
+    options: { responseCode: '={{ $json.status }}', responseHeaders: { entries: [
+      { name: 'Cache-Control', value: 'no-store' },
+      { name: 'X-Tic-Cookie-1', value: "={{ $json.cookies[0] || '' }}" },
+      { name: 'X-Tic-Cookie-2', value: "={{ $json.cookies[1] || '' }}" },
+    ] } },
+  });
+  code(no, 'Erro seguro', [1580, 1900], c['Erro seguro']);
+  liga('Erro seguro', ['Responder']);
+  code(no, 'Negar', [1580, 1700], c['Negar']);
+  liga('Negar', ['Responder']);
+
+  /** Webhook → entrada (com a permissão da rota) → sub-autorizar → SQL → resposta; senão Negar. */
+  const rota = (r, y) => {
+    const base = r.base;
+    no(r.webhook, 'n8n-nodes-base.webhook', 2, [0, y],
+      { httpMethod: r.metodo, path: `api/${r.caminho}`, responseMode: 'responseNode', options: {} },
+      { webhookId: uid(`webhook:${r.caminho}:${r.metodo}`) });
+    code(no, `${base} entrada`, [200, y],
+      `${COMUM}\n\nconst req = lerRequisicao($input.first().json, '${r.metodo}');\nreturn [{ json: { ...req, permissao: '${r.permissao}' } }];`);
+    no(`${base} autorizar`, 'n8n-nodes-base.executeWorkflow', 1.2, [400, y], {
+      source: 'database',
+      workflowId: { __rl: true, value: WF.subAutorizar, mode: 'id' },
+      workflowInputs: { mappingMode: 'defineBelow', value: {}, matchingColumns: [], schema: [], attemptToConvertTypes: false, convertFieldsToString: true },
+      options: { waitForSubWorkflow: true },
+    });
+    no(`${base} autorizado?`, 'n8n-nodes-base.if', 2.2, [600, y], {
+      conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, combinator: 'and',
+        conditions: [{ id: uid(`cond:central:${base}`), leftValue: '={{ $json.autorizado }}', rightValue: true,
+          operator: { type: 'boolean', operation: 'true', singleValue: true } }] },
+      options: {},
+    });
+    sql(no, `${base} banco`, [850, y - 40], r.query, r.params);
+    code(no, `${base} resposta`, [1100, y - 40], c[r.resposta]);
+    liga(r.webhook, [`${base} entrada`]);
+    liga(`${base} entrada`, [`${base} autorizar`]);
+    liga(`${base} autorizar`, [`${base} autorizado?`]);
+    liga(`${base} autorizado?`, [`${base} banco`], ['Negar']);
+    liga(`${base} banco`, [`${base} resposta`], ['Erro seguro']);
+    liga(`${base} resposta`, ['Responder']);
+  };
+  const A = (b) => `$('${b} autorizar').first().json`;
+  const Q = (b, campo, max) => `String((($('${b} entrada').first().json.query || {}).${campo}) || '').slice(0, ${max})`;
+  const B = (b, campo, max) => `String((($('${b} entrada').first().json.body || {}).${campo}) || '').slice(0, ${max})`;
+
+  rota({ webhook: 'GET central/alertas', metodo: 'GET', caminho: 'central/alertas', base: 'Listar', permissao: 'alerta.ver', resposta: 'Listar resposta',
+    query: "SELECT * FROM derivado.sp_central_listar($1::uuid, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))",
+    params: `[${A('Listar')}.usuarioId, ${Q('Listar', 'aba', 20)}, ${Q('Listar', 'nivel', 20)}, ${Q('Listar', 'tipo', 40)}, ${Q('Listar', 'q', 60)}]` }, 0);
+  rota({ webhook: 'GET central/resumo', metodo: 'GET', caminho: 'central/resumo', base: 'Resumo', permissao: 'alerta.ver', resposta: 'Resumo resposta',
+    query: 'SELECT * FROM derivado.sp_central_resumo($1::uuid)', params: `[${A('Resumo')}.usuarioId]` }, 200);
+  rota({ webhook: 'GET central/alerta', metodo: 'GET', caminho: 'central/alerta', base: 'Detalhe', permissao: 'alerta.ver', resposta: 'Detalhe resposta',
+    query: "SELECT * FROM derivado.sp_alerta_detalhe($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+    params: `[${A('Detalhe')}.usuarioId, ${Q('Detalhe', 'id', 36)}, ${A('Detalhe')}.ip]` }, 400);
+  rota({ webhook: 'POST central/alerta/assumir', metodo: 'POST', caminho: 'central/alerta/assumir', base: 'Assumir', permissao: 'alerta.tratar', resposta: 'Acao resposta',
+    query: "SELECT * FROM derivado.sp_alerta_pegar($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+    params: `[${A('Assumir')}.usuarioId, ${B('Assumir', 'id', 36)}, ${A('Assumir')}.ip]` }, 600);
+  rota({ webhook: 'POST central/alerta/confirmar', metodo: 'POST', caminho: 'central/alerta/confirmar', base: 'Confirmar', permissao: 'alerta.tratar', resposta: 'Acao resposta',
+    query: "SELECT * FROM derivado.sp_alerta_confirmar($1::uuid, $2::uuid, NULLIF($3, ''), NULLIF($4, '')::inet)",
+    params: `[${A('Confirmar')}.usuarioId, ${B('Confirmar', 'id', 36)}, ${B('Confirmar', 'observacao', 1000)}, ${A('Confirmar')}.ip]` }, 800);
+  rota({ webhook: 'POST central/alerta/falso', metodo: 'POST', caminho: 'central/alerta/falso', base: 'Falso', permissao: 'alerta.tratar', resposta: 'Acao resposta',
+    query: "SELECT * FROM derivado.sp_alerta_falso($1::uuid, $2::uuid, $3, NULLIF($4, ''), NULLIF($5, '')::inet)",
+    params: `[${A('Falso')}.usuarioId, ${B('Falso', 'id', 36)}, ${B('Falso', 'motivo', 30)}, ${B('Falso', 'observacao', 1000)}, ${A('Falso')}.ip]` }, 1000);
+  rota({ webhook: 'POST central/alerta/mensagem', metodo: 'POST', caminho: 'central/alerta/mensagem', base: 'Mensagem', permissao: 'alerta.acionar', resposta: 'Acao resposta',
+    query: "SELECT * FROM derivado.sp_alerta_mensagem($1::uuid, $2::uuid, $3, NULLIF($4, '')::inet)",
+    params: `[${A('Mensagem')}.usuarioId, ${B('Mensagem', 'id', 36)}, ${B('Mensagem', 'texto', 400)}, ${A('Mensagem')}.ip]` }, 1200);
+  rota({ webhook: 'POST central/alerta/sirene', metodo: 'POST', caminho: 'central/alerta/sirene', base: 'Sirene', permissao: 'alerta.acionar', resposta: 'Acao resposta',
+    query: "SELECT * FROM derivado.sp_alerta_sirene($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
+    params: `[${A('Sirene')}.usuarioId, ${B('Sirene', 'id', 36)}, ${A('Sirene')}.ip]` }, 1400);
+
+  salvar('api-central.json', w);
 }
 
 writeFileSync(arqIds, JSON.stringify(ids, null, 2) + '\n');

@@ -1,0 +1,216 @@
+<div class="pagina">
+  <header class="cabeca">
+    <div class="titulo">
+      <h1>Central de alertas</h1>
+      <span>Atualizado às {{ hora(store.ultimaOk()?.toISOString() ?? null) }} · a cada 5 s</span>
+    </div>
+    <div class="ferramentas">
+      <a routerLink="/alertas/tv" target="_blank" rel="noopener">Abrir versão TV</a>
+      <button type="button" class="tic-botao-secundario" [attr.aria-pressed]="store.som()" (click)="store.alternarSom()">{{ store.som() ? 'Som ligado' : 'Som desligado' }}</button>
+    </div>
+  </header>
+
+  @if (store.resumo(); as r) {
+    <div class="contadores" role="group" aria-label="Alertas abertos por nível">
+      <button type="button" class="cont c-critico" (click)="store.mudarFiltro({ aba: 'abertos', nivel: store.filtro().nivel === 'critico' ? '' : 'critico' })"><b>{{ r.critico }}</b> Crítico</button>
+      <button type="button" class="cont c-grave" (click)="store.mudarFiltro({ aba: 'abertos', nivel: store.filtro().nivel === 'grave' ? '' : 'grave' })"><b>{{ r.grave }}</b> Grave</button>
+      <button type="button" class="cont c-medio" (click)="store.mudarFiltro({ aba: 'abertos', nivel: store.filtro().nivel === 'medio' ? '' : 'medio' })"><b>{{ r.medio }}</b> Médio</button>
+      <button type="button" class="cont c-leve" (click)="store.mudarFiltro({ aba: 'abertos', nivel: store.filtro().nivel === 'leve' ? '' : 'leve' })"><b>{{ r.leve }}</b> Leve</button>
+      <span class="cont c-neutro">Mais antigo aberto: <b class="peq">{{ r.maisAntigo ? ha(r.maisAntigo) : '—' }}</b></span>
+    </div>
+  }
+
+  <div class="corpo">
+    <section class="tic-cartao fila" aria-label="Fila de alertas">
+      <div class="abas" role="tablist">
+        <button type="button" role="tab" [attr.aria-selected]="store.filtro().aba === 'abertos'" [class.on]="store.filtro().aba === 'abertos'" (click)="store.mudarFiltro({ aba: 'abertos' })">Abertos ({{ store.resumo()?.abertos ?? 0 }})</button>
+        <button type="button" role="tab" [attr.aria-selected]="store.filtro().aba === 'tratados'" [class.on]="store.filtro().aba === 'tratados'" (click)="store.mudarFiltro({ aba: 'tratados' })">Tratados hoje</button>
+      </div>
+      <div class="filtros">
+        <label class="sr-only" for="q">Buscar</label>
+        <input id="q" type="search" placeholder="Placa ou motorista" [value]="store.filtro().q" (change)="store.mudarFiltro({ q: v($event) })" />
+        <label class="sr-only" for="fn">Nível</label>
+        <select id="fn" [value]="store.filtro().nivel" (change)="store.mudarFiltro({ nivel: v($event) })">
+          <option value="">Todos os níveis</option>
+          <option value="critico">Crítico</option><option value="grave">Grave</option><option value="medio">Médio</option><option value="leve">Leve</option>
+        </select>
+        <label class="sr-only" for="ft">Tipo</label>
+        <select id="ft" [value]="store.filtro().tipo" (change)="store.mudarFiltro({ tipo: v($event) })">
+          <option value="">Todos os tipos</option>
+          @for (t of tipos; track t.valor) {
+            <option [value]="t.valor">{{ t.nome }}</option>
+          }
+        </select>
+      </div>
+      <div class="lista">
+        @if (store.carregando()) {
+          <p class="estado" role="status">Carregando a fila…</p>
+        } @else if (store.erroFila()) {
+          <div class="tic-aviso erro" role="alert">{{ store.erroFila() }}</div>
+        } @else {
+          @for (a of store.fila(); track a.id) {
+            <button type="button" class="linha" [class.sel]="a.id === store.selecionadoId()" [class.critico]="a.nivel === 'critico'"
+                    [class.novo]="store.destaque().has(a.id)" (click)="store.abrir(a.id)">
+              <span class="mini" aria-hidden="true">{{ a.cameraCapa ? nomeCamera[a.cameraCapa] : 'sem foto' }}</span>
+              <span class="info">
+                <span class="l1"><span class="tic-selo" [class]="'tic-selo ' + a.nivel">{{ nomeNivel[a.nivel] }}</span><b>{{ a.titulo }}</b></span>
+                <span class="l2">{{ a.placa }} · {{ a.motorista ?? 'ninguém logado' }} · {{ a.local ?? 'local desconhecido' }}</span>
+                <span class="l3">{{ textoIA(a.ia) }} · {{ store.filtro().aba === 'abertos' ? situacao(a) : nomeEstado[a.estado] + (a.tratadoPor ? ' por ' + a.tratadoPor : '') }}</span>
+              </span>
+              <span class="quando">{{ hora(a.horario) }}<br />{{ ha(a.horario) }}</span>
+            </button>
+          } @empty {
+            <p class="estado">{{ store.filtro().aba === 'abertos' ? 'Nenhum alerta aberto. Tudo em dia.' : 'Nenhum alerta tratado hoje.' }}</p>
+          }
+        }
+      </div>
+    </section>
+
+    <section class="tic-cartao detalhe" aria-label="Alerta aberto">
+      @if (store.detalhe(); as d) {
+        <div class="d-cabeca">
+          <div class="d-tit">
+            <div class="d-l1"><span class="tic-selo" [class]="'tic-selo ' + d.nivel">{{ nomeNivel[d.nivel] }}</span><h2>{{ d.titulo }}</h2></div>
+            <span>{{ d.placa }} · {{ d.motorista ?? 'ninguém logado' }} · {{ d.local ?? 'local desconhecido' }} · {{ hora(d.horario) }} ({{ ha(d.horario) }})</span>
+          </div>
+          @if (d.estado === 'aberto' || d.estado === 'em_tratamento') {
+            @if (d.assumidoPor && d.assumidoPor === eu()) {
+              <span class="assumido">Em tratamento por você</span>
+            } @else if (podeTratar()) {
+              <button type="button" class="tic-botao-secundario" (click)="store.assumir()" [disabled]="store.ocupado()">{{ d.assumidoPor ? 'Assumir (está com ' + d.assumidoPor + ')' : 'Assumir' }}</button>
+            }
+          } @else {
+            <span class="assumido neutro">{{ nomeEstado[d.estado] }}{{ d.tratadoPor ? ' por ' + d.tratadoPor : '' }}</span>
+          }
+        </div>
+
+        @if (store.erro()) {
+          <div class="tic-aviso erro d-msg" role="alert">{{ store.erro() }}</div>
+        }
+        @if (store.aviso()) {
+          <div class="tic-aviso info d-msg" role="status">{{ store.aviso() }}</div>
+        }
+
+        <div class="d-corpo">
+          <div class="fotos-col">
+            @if (d.podeVerFotos && d.fotos?.length) {
+              <div class="fotos">
+                @for (f of d.fotos; track f.id; let i = $index) {
+                  <div class="foto" [class.grande]="i === 0" role="img" [attr.aria-label]="'Foto da câmera ' + nomeCamera[f.camera]">
+                    <span>{{ nomeCamera[f.camera] }} · {{ hora(f.instante) }}</span>
+                  </div>
+                }
+              </div>
+              <p class="nota-lgpd">Seu acesso a estas fotos fica registrado (LGPD). Fotos de exemplo até a ingestão do Moovsec.</p>
+            } @else if (!d.podeVerFotos) {
+              <p class="estado">Seu perfil não vê as fotos das câmeras.</p>
+            } @else {
+              <p class="estado">Sem fotos para este alerta (evento de telemetria).</p>
+            }
+            @if (d.linkClipe) {
+              <a [href]="d.linkClipe" target="_blank" rel="noopener">Abrir clipe no Moovsec</a>
+            }
+          </div>
+
+          <div class="lado">
+            <div class="caixa">
+              <div class="rot">Pré-triagem da IA</div>
+              <b [class.ia-sim]="d.ia?.resultado === 'verdadeiro'">{{ textoIA(d.ia) }}</b>
+              @if (d.ia?.evidencia) { <p>{{ d.ia?.evidencia }}</p> }
+            </div>
+            <div class="caixa grade">
+              <span>Velocidade</span><b>{{ d.velocidade !== null ? d.velocidade + ' km/h' : '—' }}</b>
+              <span>Limpador</span><b>{{ d.limpador === null ? '—' : d.limpador ? 'ligado' : 'desligado' }}</b>
+              <span>Jornada</span><b>{{ d.jornada?.status ?? '—' }}</b>
+            </div>
+            <div class="caixa">
+              <div class="rot">Ações</div>
+              @for (ac of d.acoes; track $index) {
+                <span class="acao">{{ hora(ac.em) }} · <b>{{ nomeAcao[ac.tipo] }}</b> · {{ ac.por ?? 'automática' }} · <span [class]="'ea ea-' + ac.estado">{{ nomeEstadoAcao[ac.estado] }}</span></span>
+              } @empty {
+                <span class="vazio">Nenhuma ação ainda.</span>
+              }
+            </div>
+            <div class="caixa">
+              <div class="rot">{{ d.motorista ?? 'Veículo' }} nas últimas 24 h</div>
+              @for (h of d.historico; track h.id) {
+                <span class="acao">{{ hora(h.horario) }} · {{ h.titulo }} · {{ nomeEstado[h.estado] }}</span>
+              } @empty {
+                <span class="vazio">Nenhum outro alerta.</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        @if (d.estado === 'aberto' || d.estado === 'em_tratamento') {
+          @if (store.editandoMensagem()) {
+            <div class="msg">
+              <div class="tic-campo">
+                <label for="msg">Mensagem para o terminal do {{ d.placa }} ({{ textoMensagem().length }}/200)</label>
+                <textarea id="msg" rows="2" maxlength="200" [value]="textoMensagem()" (input)="textoMensagem.set(v($event))"></textarea>
+              </div>
+              <button type="button" class="tic-botao" (click)="store.mensagem(textoMensagem())" [disabled]="store.ocupado() || !textoMensagem().trim()">Enviar</button>
+              <button type="button" class="tic-botao-secundario" (click)="store.editandoMensagem.set(false)">Cancelar</button>
+            </div>
+          }
+          <div class="acoes">
+            @if (podeAcionar()) {
+              <button type="button" class="tic-botao-secundario" (click)="store.editandoMensagem.set(true)">Mensagem ao terminal</button>
+              <button type="button" class="tic-botao-perigo" (click)="store.modal.set('sirene')">Acionar sirene</button>
+            }
+            <span class="espaco"></span>
+            @if (podeTratar()) {
+              <button type="button" class="tic-botao-secundario" (click)="abrirFalso()">Falso positivo</button>
+              <button type="button" class="tic-botao" (click)="abrirConfirmar()">Confirmar alerta</button>
+            }
+          </div>
+        }
+      } @else if (store.carregandoDetalhe()) {
+        <p class="estado" role="status">Abrindo o alerta…</p>
+      } @else {
+        <p class="estado">Escolha um alerta na fila.</p>
+      }
+    </section>
+  </div>
+</div>
+
+@if (store.modal() && store.detalhe(); as d) {
+  <div class="tic-veu">
+    @switch (store.modal()) {
+      @case ('sirene') {
+        <div class="tic-dialogo" role="alertdialog" aria-labelledby="t-sir">
+          <h2 id="t-sir">Acionar a sirene do {{ d.placa }}?</h2>
+          <p class="texto">A sirene toca na cabine{{ d.motorista ? ' de ' + d.motorista : '' }} assim que o envio for feito. A ação fica registrada com o seu nome.</p>
+          <div class="acoes"><button type="button" class="tic-botao-secundario" (click)="store.modal.set('')">Cancelar</button>
+            <button type="button" class="tic-botao-perigo cheio" (click)="store.sirene()" [disabled]="store.ocupado()">Acionar sirene</button></div>
+        </div>
+      }
+      @case ('falso') {
+        <div class="tic-dialogo" role="dialog" aria-labelledby="t-falso">
+          <h2 id="t-falso">Marcar como falso positivo</h2>
+          @if (store.erro()) { <div class="tic-aviso erro" role="alert">{{ store.erro() }}</div> }
+          <fieldset class="motivos">
+            <legend>Motivo</legend>
+            @for (m of motivos; track m.valor) {
+              <label><input type="radio" name="motivo" [value]="m.valor" [checked]="motivo() === m.valor" (change)="motivo.set(m.valor)" /> {{ m.nome }}</label>
+            }
+          </fieldset>
+          <div class="tic-campo"><label for="obs-f">Observação (opcional)</label><textarea id="obs-f" rows="2" maxlength="1000" [value]="observacao()" (input)="observacao.set(v($event))"></textarea></div>
+          @if (d.ia?.resultado === 'verdadeiro') { <p class="tic-nota">A IA disse "verdadeiro": sua decisão entra na calibração da triagem.</p> }
+          <div class="acoes"><button type="button" class="tic-botao-secundario" (click)="store.modal.set('')">Cancelar</button>
+            <button type="button" class="tic-botao" (click)="store.falso(motivo(), observacao())" [disabled]="store.ocupado()">Marcar falso positivo</button></div>
+        </div>
+      }
+      @case ('confirmar') {
+        <div class="tic-dialogo" role="dialog" aria-labelledby="t-conf">
+          <h2 id="t-conf">Confirmar o alerta</h2>
+          <p class="texto">O alerta é real e sai da fila. Mensagem e sirene continuam registradas.</p>
+          <div class="tic-campo"><label for="obs-c">Observação (opcional)</label><textarea id="obs-c" rows="2" maxlength="1000" [value]="observacao()" (input)="observacao.set(v($event))"></textarea></div>
+          @if (d.ia?.resultado === 'falso') { <p class="tic-nota">A IA disse "falso": sua decisão entra na calibração da triagem.</p> }
+          <div class="acoes"><button type="button" class="tic-botao-secundario" (click)="store.modal.set('')">Cancelar</button>
+            <button type="button" class="tic-botao" (click)="store.confirmar(observacao())" [disabled]="store.ocupado()">Confirmar alerta</button></div>
+        </div>
+      }
+    }
+  </div>
+}

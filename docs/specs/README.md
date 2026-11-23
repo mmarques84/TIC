@@ -11,7 +11,7 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | parametros.md | 2 | a criar | limites por operação (Michael) |
 | [motor-jornada.md](motor-jornada.md) | 3a | implementada no banco (20/11) | skill regras-jornada; limites por operação (Michael) |
 | alertas-escalonamento.md | 3a | a criar | teste de sirene |
-| central-alertas.md | 3a | a criar | alertas, triagem |
+| [central-alertas.md](central-alertas.md) | 2–3a | implementada com dados fictícios (20/11) | ingestão (dados reais); funciona com dados fictícios |
 | triagem-ia.md | 3a | a criar | teto de custo (André) |
 | opi.md | 3a | a criar | OPIs e vídeos (Natanael) |
 | jornada-painel.md | 3b | a criar | motor-jornada |

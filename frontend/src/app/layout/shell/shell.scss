@@ -41,12 +41,49 @@
 }
 
 .grupo-nome {
-  font-size: 11px;
-  font-weight: 600;
+  font: 600 11px var(--tic-fonte);
   letter-spacing: 0.8px;
   text-transform: uppercase;
   color: var(--tic-marinho-texto-apagado);
   padding: 0 12px 6px;
+
+  &:not(.fixo) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 32px;
+    padding: 0 12px;
+    background: none;
+    border: 0;
+    border-radius: var(--tic-raio-p);
+    cursor: pointer;
+
+    &:hover {
+      color: #fff;
+      background: var(--tic-marinho-medio);
+    }
+  }
+}
+
+.seta {
+  transition: transform 0.15s ease;
+
+  &.virada {
+    transform: rotate(90deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seta {
+    transition: none;
+  }
+}
+
+.itens {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .item {
