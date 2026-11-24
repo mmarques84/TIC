@@ -14,7 +14,7 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | [central-alertas.md](central-alertas.md) | 2–3a | implementada com dados fictícios (20/11) | ingestão (dados reais); funciona com dados fictícios |
 | triagem-ia.md | 3a | a criar | teto de custo (André) |
 | opi.md | 3a | a criar | OPIs e vídeos (Natanael) |
-| jornada-painel.md | 3b | a criar | motor-jornada |
+| [jornada-painel.md](jornada-painel.md) | 3b | implementada com dados fictícios (23/11) | motor-jornada |
 | torre.md | 3b | a criar | Datapar (Michael) |
 | cockpit-gerencial.md | 3b | a criar | alertas, triagem |
 | cockpit-opi.md | 3b | a criar | opi |

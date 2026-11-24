@@ -1,0 +1,145 @@
+<div class="pagina">
+  <header class="cabeca">
+    <div class="titulo">
+      <h1>Jornada dos motoristas</h1>
+      <span>Retrato das {{ hora(store.resumo()?.retrato ?? null) }} · Lei 13.103/2015 · atualiza a cada 60 s</span>
+    </div>
+    <span class="total">{{ store.resumo()?.todos ?? 0 }} motoristas com controle</span>
+  </header>
+
+  <div class="faixas" role="group" aria-label="Filtrar por situação">
+    @for (f of faixas; track f.chave) {
+      <button type="button" class="faixa" [class]="'faixa f-' + f.cor" [class.sel]="store.filtro().faixa === f.chave && f.chave !== ''"
+              [attr.aria-pressed]="store.filtro().faixa === f.chave" (click)="store.mudarFiltro({ faixa: store.filtro().faixa === f.chave ? '' : f.chave })">
+        <span class="fn">{{ f.nome }}</span><b>{{ contagem(store.resumo(), f.chave) }}</b><span class="fs">{{ f.sub }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="filtros">
+    <span>Dias seguidos sem descanso de 35 h:</span>
+    <span class="dias" role="group" aria-label="Dias sem descanso semanal">
+      @for (d of dias; track d.valor) {
+        <button type="button" [class.on]="store.filtro().dias === d.valor" [attr.aria-pressed]="store.filtro().dias === d.valor"
+                (click)="store.mudarFiltro({ dias: d.valor })">{{ d.nome }}</button>
+      }
+    </span>
+    <label class="sr-only" for="q">Buscar</label>
+    <input id="q" type="search" placeholder="Motorista, placa ou local" [value]="store.filtro().q" (change)="store.mudarFiltro({ q: v($event) })" />
+    <label class="sem"><input type="checkbox" [checked]="store.filtro().semControle" (change)="store.mudarFiltro({ semControle: $any($event.target).checked })" /> Mostrar sem controle</label>
+  </div>
+
+  <section class="tic-cartao tabela" aria-label="Motoristas">
+    <div class="linha cab" aria-hidden="true">
+      <span>Motorista / veículo</span><span>Agora</span><span>Jornada atual</span><span>Parado no local</span><span>Descanso semanal</span><span>Semana</span><span>Alertas</span><span>Tratativa</span>
+    </div>
+    @if (store.carregando()) {
+      <p class="estado" role="status">Carregando…</p>
+    } @else if (store.erroLista()) {
+      <div class="tic-aviso erro" role="alert">{{ store.erroLista() }}</div>
+    } @else {
+      @for (m of store.lista(); track m.id) {
+        <div class="bloco">
+          <button type="button" class="linha" [class.aberta]="store.abertoId() === m.id" [class.violacao]="m.nivel === 'violacao'"
+                  [attr.aria-expanded]="store.abertoId() === m.id" (click)="abrir(m.id)">
+            <span class="pessoa"><b>{{ m.nome }}</b><small>{{ m.placa ?? '—' }}{{ m.semControle ? ' · sem controle' : '' }}</small></span>
+            <span><span class="tic-selo" [class]="'tic-selo ' + (corStatus[m.status] === 'dentro' ? 'ok' : corStatus[m.status] === 'atencao' ? 'medio' : 'neutro')">{{ nomeStatus[m.status] || m.status }}</span></span>
+            <span class="jor">
+              @if (m.jornadaAtual) {
+                <b>{{ hm(m.jornadaAtual.trabalhoMin) }} de trabalho</b>
+                <span class="barra" aria-hidden="true"><span class="enche" [class]="'enche n-' + (m.jornadaAtual.nivel ?? 'dentro')" [style.width.%]="larguraBarra(m.jornadaAtual.trabalhoMin)"></span><i style="left: 61.5%"></i><i style="left: 76.9%"></i><i style="left: 92.3%"></i></span>
+              } @else {
+                <span class="apagado">sem jornada aberta</span>
+              }
+            </span>
+            <span class="duas">
+              @if (m.paradoDesde) { <b [class.azul]="m.paradoDesde && desde(m.paradoDesde).startsWith('3')">{{ desde(m.paradoDesde) }}</b><small>desde {{ dataHora(m.paradoDesde) }}{{ m.local ? ' · ' + m.local : '' }}</small> }
+              @else { <b>—</b><small>{{ m.status === 'dirigindo' ? 'em movimento' : '' }}</small> }
+            </span>
+            <span class="duas"><b [class]="'d-' + nivelDias(m.diasSemDsr)">{{ m.diasSemDsr }} {{ m.diasSemDsr === 1 ? 'dia' : 'dias' }}</b><small>{{ m.ultimoDsr ? 'último 35 h+: ' + dataHora(m.ultimoDsr) : 'sem 35 h+ no período' }}</small></span>
+            <span class="semana">{{ hm(m.semanaMin) }}</span>
+            <span class="alertas">
+              @for (a of m.alertas.slice(0, 3); track a.codigo) {
+                <span [class]="'al al-' + a.nivel">{{ a.texto }}</span>
+              } @empty {
+                <span class="al al-ok">Sem alerta</span>
+              }
+              @if (m.alertas.length > 3) { <span class="al">+{{ m.alertas.length - 3 }} alerta(s)</span> }
+            </span>
+            <span class="trat">{{ m.tratativa ? nomeTratativa[m.tratativa.tipo] + ' · ' + m.tratativa.por + ' · ' + dataHora(m.tratativa.em) : '—' }}</span>
+          </button>
+
+          @if (store.abertoId() === m.id) {
+            <div class="detalhe">
+              @if (store.carregandoDetalhe()) {
+                <p class="estado" role="status">Abrindo…</p>
+              } @else if (store.detalhe(); as d) {
+                <div class="col">
+                  <h3>Últimas jornadas</h3>
+                  <div class="jt jt-cab" aria-hidden="true"><span>Dia</span><span>Início</span><span>Fim</span><span>Líquido</span><span>Refeição</span><span>Contínua</span><span>Interjornada</span><span>Situação</span></div>
+                  @for (j of d.jornadas; track j.id) {
+                    <div class="jt">
+                      <span>{{ diaSemana(j.dia) }}</span><span>{{ hora(j.inicio) }}</span><span>{{ j.fim ? hora(j.fim) : '—' }}</span>
+                      <b>{{ hm(j.trabalhoMin) }}</b><span>{{ hm(j.refeicaoMin) }}</span><span>{{ hm(j.maxContinuaMin) }}</span><span>{{ hm(j.interjornadaMin) }}</span>
+                      <span [class]="'sit n-' + (j.nivel ?? 'dentro')">{{ nomeSituacao[j.situacao] }}@for (mo of j.motivos; track mo.codigo) {<span> · {{ mo.texto }}</span>}</span>
+                    </div>
+                  } @empty {
+                    <p class="estado">Nenhuma jornada nos últimos 8 dias.</p>
+                  }
+                  <h3>Paradas de 11 h ou mais</h3>
+                  @for (p of d.paradas; track p.inicio) {
+                    <span class="ln">{{ dataHora(p.inicio) }} → {{ dataHora(p.fim) }} · {{ hm(p.minutos) }}{{ p.local ? ' · ' + p.local : '' }} · <b [class.ok]="p.contaDsr">{{ p.motivo }}</b></span>
+                  } @empty {
+                    <p class="estado">Nenhuma parada longa nos últimos 8 dias.</p>
+                  }
+                </div>
+                <div class="col">
+                  <h3>Últimas macros</h3>
+                  @for (mc of d.macros; track mc.horario) {
+                    <span class="ln" [class.desc]="mc.desconhecida">{{ dataHora(mc.horario) }} · {{ mc.desconhecida ? 'macro ' + mc.numero + ' (sem mapa: avisar a TI)' : nomeMacro[mc.significado!] }}{{ mc.local ? ' · ' + mc.local : '' }}</span>
+                  } @empty {
+                    <p class="estado">Sem macros.</p>
+                  }
+                  @if (d.tratativas.length) {
+                    <h3>Tratativas</h3>
+                    @for (t of d.tratativas; track t.em) {
+                      <span class="ln">{{ dataHora(t.em) }} · <b>{{ nomeTratativa[t.tipo] }}</b> · {{ t.por }}{{ t.observacao ? ' · ' + t.observacao : '' }}</span>
+                    }
+                  }
+                  @if (podeTratar()) {
+                    <form class="trat-form" (submit)="salvar($event)" novalidate>
+                      <b>Registrar tratativa</b>
+                      @if (store.erro()) { <div class="tic-aviso erro" role="alert">{{ store.erro() }}</div> }
+                      @if (store.aviso()) { <div class="tic-aviso info" role="status">{{ store.aviso() }}</div> }
+                      @if (jornadasParaTratar(d).length) {
+                        <label for="tj-{{ d.id }}">Sobre</label>
+                        <select id="tj-{{ d.id }}" (change)="tJornada.set(v($event))">
+                          <option value="">A situação de agora do motorista</option>
+                          @for (j of jornadasParaTratar(d); track j.id) {
+                            <option [value]="j.id">Jornada de {{ diaSemana(j.dia) }} ({{ nomeSituacao[j.situacao] }})</option>
+                          }
+                        </select>
+                      }
+                      <label for="tt-{{ d.id }}">Tipo</label>
+                      <select id="tt-{{ d.id }}" (change)="tTipo.set(v($event))">
+                        <option value="" [selected]="!tTipo()">Escolha…</option>
+                        @for (t of tipos; track t.valor) { <option [value]="t.valor">{{ t.nome }}</option> }
+                      </select>
+                      <label for="to-{{ d.id }}">Observação{{ tTipo() === 'outro' ? '' : ' (opcional)' }}</label>
+                      <textarea id="to-{{ d.id }}" rows="2" maxlength="1000" placeholder="Ex.: ficou de DSR na matriz de sáb 14h a seg 05h" [value]="tObs()" (input)="tObs.set(v($event))"></textarea>
+                      <button type="submit" class="tic-botao" [disabled]="store.ocupado()">{{ store.ocupado() ? 'Salvando…' : 'Salvar tratativa' }}</button>
+                    </form>
+                  }
+                </div>
+              } @else if (store.erro()) {
+                <div class="tic-aviso erro" role="alert">{{ store.erro() }}</div>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="estado">Nenhum motorista com esse filtro.</p>
+      }
+    }
+  </section>
+</div>

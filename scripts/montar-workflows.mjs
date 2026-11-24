@@ -13,7 +13,7 @@ const arqIds = join(raiz, 'n8n/ids.json');
 const ids = existsSync(arqIds) ? JSON.parse(readFileSync(arqIds, 'utf8')) : {};
 const uid = (chave) => (ids[chave] ??= randomUUID());
 
-const WF = { subAutorizar: 'TicSubAutorizar1', apiAuth: 'TicApiAuth000001', apiAdmin: 'TicApiAdmin00001', apiCentral: 'TicApiCentral001' };
+const WF = { subAutorizar: 'TicSubAutorizar1', apiAuth: 'TicApiAuth000001', apiAdmin: 'TicApiAdmin00001', apiCentral: 'TicApiCentral001', apiJornada: 'TicApiJornada001' };
 const PG = { postgres: { id: 'TicPostgresN8n01', name: 'Postgres TIC (n8n)' } };
 
 const COMUM = ler('n8n/codigo/comum.js');
@@ -311,10 +311,10 @@ const sql = (no, nome, pos, query, params) =>
   salvar('api-admin.json', w);
 }
 
-// ---------------- api-central (spec central-alertas) ----------------
-{
-  const { w, no, liga } = novoWorkflow(WF.apiCentral, 'api-central');
-  const c = blocos('n8n/codigo/central/rotas.js');
+// ---------------- APIs de tela (mesmo molde: webhook → entrada com a permissão → sub-autorizar → SQL → resposta) ----------------
+function apiDeTela(wfId, nomeWf, arquivoCodigo, montarRotas) {
+  const { w, no, liga } = novoWorkflow(wfId, nomeWf);
+  const c = blocos(arquivoCodigo);
   no('Responder', 'n8n-nodes-base.respondToWebhook', 1.1, [1800, 600], {
     respondWith: 'json',
     responseBody: '={{ $json.body }}',
@@ -361,7 +361,12 @@ const sql = (no, nome, pos, query, params) =>
   const A = (b) => `$('${b} autorizar').first().json`;
   const Q = (b, campo, max) => `String((($('${b} entrada').first().json.query || {}).${campo}) || '').slice(0, ${max})`;
   const B = (b, campo, max) => `String((($('${b} entrada').first().json.body || {}).${campo}) || '').slice(0, ${max})`;
+  montarRotas({ rota, A, Q, B });
+  salvar(`${nomeWf}.json`, w);
+}
 
+// ---------------- api-central (spec central-alertas) ----------------
+apiDeTela(WF.apiCentral, 'api-central', 'n8n/codigo/central/rotas.js', ({ rota, A, Q, B }) => {
   rota({ webhook: 'GET central/alertas', metodo: 'GET', caminho: 'central/alertas', base: 'Listar', permissao: 'alerta.ver', resposta: 'Listar resposta',
     query: "SELECT * FROM derivado.sp_central_listar($1::uuid, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))",
     params: `[${A('Listar')}.usuarioId, ${Q('Listar', 'aba', 20)}, ${Q('Listar', 'nivel', 20)}, ${Q('Listar', 'tipo', 40)}, ${Q('Listar', 'q', 60)}]` }, 0);
@@ -385,9 +390,21 @@ const sql = (no, nome, pos, query, params) =>
   rota({ webhook: 'POST central/alerta/sirene', metodo: 'POST', caminho: 'central/alerta/sirene', base: 'Sirene', permissao: 'alerta.acionar', resposta: 'Acao resposta',
     query: "SELECT * FROM derivado.sp_alerta_sirene($1::uuid, $2::uuid, NULLIF($3, '')::inet)",
     params: `[${A('Sirene')}.usuarioId, ${B('Sirene', 'id', 36)}, ${A('Sirene')}.ip]` }, 1400);
+});
 
-  salvar('api-central.json', w);
-}
+// ---------------- api-jornada (spec jornada-painel) ----------------
+apiDeTela(WF.apiJornada, 'api-jornada', 'n8n/codigo/jornada/rotas.js', ({ rota, A, Q, B }) => {
+  rota({ webhook: 'GET jornada/motoristas', metodo: 'GET', caminho: 'jornada/motoristas', base: 'Listar', permissao: 'jornada.ver', resposta: 'Listar resposta',
+    query: "SELECT * FROM derivado.sp_jornada_listar($1::uuid, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5::boolean)",
+    params: `[${A('Listar')}.usuarioId, ${Q('Listar', 'faixa', 20)}, ${Q('Listar', 'dias', 10)}, ${Q('Listar', 'q', 60)}, ${Q('Listar', 'semcontrole', 5)} === 'true' ? 'true' : 'false']` }, 0);
+  rota({ webhook: 'GET jornada/resumo', metodo: 'GET', caminho: 'jornada/resumo', base: 'Resumo', permissao: 'jornada.ver', resposta: 'Resumo resposta',
+    query: 'SELECT * FROM derivado.sp_jornada_resumo($1::uuid)', params: `[${A('Resumo')}.usuarioId]` }, 200);
+  rota({ webhook: 'GET jornada/motorista', metodo: 'GET', caminho: 'jornada/motorista', base: 'Detalhe', permissao: 'jornada.ver', resposta: 'Detalhe resposta',
+    query: 'SELECT * FROM derivado.sp_jornada_detalhe($1::uuid, $2::uuid)', params: `[${A('Detalhe')}.usuarioId, ${Q('Detalhe', 'id', 36)}]` }, 400);
+  rota({ webhook: 'POST jornada/tratativa', metodo: 'POST', caminho: 'jornada/tratativa', base: 'Tratativa', permissao: 'jornada.tratar', resposta: 'Tratativa resposta',
+    query: "SELECT * FROM derivado.sp_tratativa_criar($1::uuid, $2::uuid, NULLIF($3, '')::uuid, $4, NULLIF($5, ''), NULLIF($6, '')::inet)",
+    params: `[${A('Tratativa')}.usuarioId, ${B('Tratativa', 'motorista', 36)}, ${B('Tratativa', 'jornada', 36)}, ${B('Tratativa', 'tipo', 30)}, ${B('Tratativa', 'observacao', 1000)}, ${A('Tratativa')}.ip]` }, 600);
+});
 
 writeFileSync(arqIds, JSON.stringify(ids, null, 2) + '\n');
 

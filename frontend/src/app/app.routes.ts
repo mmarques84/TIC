@@ -9,6 +9,7 @@ const emConstrucao = () => import('./features/em-construcao/em-construcao').then
 const TELAS_PRONTAS: Record<string, () => Promise<Type<unknown>>> = {
   '/admin/usuarios': () => import('./features/admin/paginas/usuarios/usuarios').then((m) => m.AdminUsuarios),
   '/alertas': () => import('./features/central/paginas/central/central').then((m) => m.Central),
+  '/jornada': () => import('./features/jornada/paginas/jornada/jornada').then((m) => m.Jornada),
 };
 
 export const routes: Routes = [

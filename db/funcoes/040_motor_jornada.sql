@@ -95,8 +95,10 @@ $$;
 
 -- ===================== gravação de uma jornada =====================
 
+-- p_refeicao_em_curso: a refeição ainda não terminou (não dá para dizer que foi curta).
+DROP FUNCTION IF EXISTS derivado.int_gravar_jornada(uuid, uuid, uuid, timestamptz, timestamptz, text, integer, integer, integer);
 CREATE OR REPLACE FUNCTION derivado.int_gravar_jornada(p_motorista uuid, p_operacao uuid, p_veiculo uuid, p_inicio timestamptz,
-  p_fim timestamptz, p_situacao text, p_refeicao integer, p_descanso integer, p_espera integer)
+  p_fim timestamptz, p_situacao text, p_refeicao integer, p_descanso integer, p_espera integer, p_refeicao_em_curso boolean DEFAULT false)
 RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
 #variable_conflict use_column
@@ -125,7 +127,7 @@ BEGIN
     IF v_cont IS NOT NULL AND v_cont > derivado.fn_limite_min('jornada.direcao_continua_max', p_operacao) THEN
       v_mot := v_mot || jsonb_build_object('codigo', 'direcao_continua', 'nivel', 'violacao', 'valor', derivado.fn_hm(v_cont));
     END IF;
-    IF p_refeicao > 0 AND p_refeicao < derivado.fn_limite_min('jornada.refeicao_min', p_operacao) THEN
+    IF NOT p_refeicao_em_curso AND p_refeicao > 0 AND p_refeicao < derivado.fn_limite_min('jornada.refeicao_min', p_operacao) THEN
       v_mot := v_mot || jsonb_build_object('codigo', 'refeicao_curta', 'nivel', 'violacao', 'valor', derivado.fn_hm(p_refeicao));
     END IF;
   ELSE
@@ -213,7 +215,8 @@ BEGIN
     v_mantidas := v_mantidas || derivado.int_gravar_jornada(p_motorista, v_op, v_vei, v_ini, NULL,
       CASE WHEN derivado.fn_minutos(v_ini, now()) <= derivado.fn_limite_min('jornada.em_curso_max', v_op) THEN 'em_curso' ELSE 'sem_fim' END,
       v_ref + CASE WHEN v_ref_ini IS NOT NULL THEN derivado.fn_minutos(v_ref_ini, now()) ELSE 0 END,
-      v_par + CASE WHEN v_par_ini IS NOT NULL THEN derivado.fn_minutos(v_par_ini, now()) ELSE 0 END, v_esp);
+      v_par + CASE WHEN v_par_ini IS NOT NULL THEN derivado.fn_minutos(v_par_ini, now()) ELSE 0 END, v_esp,
+      v_ref_ini IS NOT NULL);
   END IF;
 
   -- Jornadas antigas da janela que não existem mais (macro corrigida): apaga se nada aponta para elas.
@@ -307,8 +310,11 @@ BEGIN
   ELSIF v_semana >= derivado.fn_limite_min('jornada.atencao_semana', v_op) THEN
     v_alertas := v_alertas || jsonb_build_object('codigo', 'semana', 'nivel', 'atencao', 'valor', derivado.fn_hm(v_semana));
   END IF;
-  -- parado agora com jornada aberta (R17, R20)
-  IF v_parado_desde IS NOT NULL AND v_atual IS NOT NULL THEN
+  -- parado agora com jornada aberta (R17, R20). "Aberta" inclui a jornada que já virou "sem fim" (mais de 16 h sem fim lançado),
+  -- que é justamente o caso de quem parou 35 h sem lançar fim de jornada.
+  IF v_parado_desde IS NOT NULL AND (v_atual IS NOT NULL OR EXISTS (
+       SELECT 1 FROM derivado.jornada jj WHERE jj.motorista_id = p_motorista AND jj.situacao = 'sem_fim' AND jj.fim IS NULL
+         AND jj.inicio <= v_parado_desde AND jj.inicio >= p_desde)) THEN
     IF derivado.fn_minutos(v_parado_desde, now()) >= derivado.fn_limite_min('jornada.dsr', v_op) THEN
       IF NOT EXISTS (SELECT 1 FROM derivado.tratativa t WHERE t.motorista_id = p_motorista AND t.criado_em >= v_parado_desde) THEN
         v_alertas := v_alertas || jsonb_build_object('codigo', 'parado_35h_jornada_aberta', 'nivel', 'conferir', 'valor', derivado.fn_hm(derivado.fn_minutos(v_parado_desde, now())));
@@ -332,7 +338,8 @@ BEGIN
     SELECT mo.nome INTO v_outro FROM derivado.sessao_motorista s JOIN cadastro.motorista mo ON mo.id = s.motorista_id
     WHERE s.veiculo_id = (SELECT veiculo_id FROM derivado.jornada WHERE id = v_atual)
       AND s.motorista_id <> p_motorista AND s.periodo @> now() LIMIT 1;
-    IF v_outro IS NOT NULL THEN
+    IF v_outro IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM derivado.tratativa t WHERE t.motorista_id = p_motorista AND t.criado_em >= v_hoje) THEN  -- R24
       v_alertas := v_alertas || jsonb_build_object('codigo', 'outro_login', 'nivel', 'conferir', 'valor', v_outro);
     END IF;
   END IF;
