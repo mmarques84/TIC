@@ -97,3 +97,61 @@ for (const c of r.chamadas || []) {
   }
 }
 return out;
+
+// @no Juntar paginas
+// Sub-workflow sub-autotrac-get: recebe UMA chamada e junta as páginas dela. Como é uma chamada por execução,
+// a resposta nunca se perde de qual veículo é (o pairedItem do n8n se confundia com páginas + erros).
+const entrada = $('Entrada').first().json;
+let http = 0; const itens = [];
+for (const item of $input.all()) {
+  const j = item.json || {};
+  if (j.error) {
+    const e = j.error;
+    http = Number(e.httpCode || e.statusCode || e.status || (String(e.message || '').match(/\b([45]\d\d)\b/) || [])[1] || 0) || 500;
+  } else itens.push(...(Array.isArray(j.Data) ? j.Data : Array.isArray(j) ? j : []));
+}
+return [{ json: { lote: entrada.lote, veiculo: entrada.veiculo, codigo: entrada.codigo, tipo: entrada.tipo,
+  http: http || null, itensJson: JSON.stringify(http ? [] : itens), quantidade: http ? 0 : itens.length } }];
+
+// @no Resumo das chamadas
+// Falhas (sem dado sensível) e o resultado para controle.credencial_status. 422 = fora da lista de autorizados.
+const grupos = $('Buscar na Autotrac').all().map((i) => i.json);
+const lote = $('Abrir lote').first().json.r.lote;
+const falhas = grupos.filter((g) => g.http || g.error).map((g) => ({ placa: `Autotrac ${g.codigo || '?'} (${g.tipo || '?'})`, http: g.http || 500 }));
+const bloqueio = falhas.find((f) => f.http === 401 || f.http === 403);
+const primeira = bloqueio || falhas[0];
+return [{ json: {
+  lote,
+  falhasJson: JSON.stringify(falhas),
+  ok: bloqueio ? 'false' : 'true',
+  http: primeira ? String(primeira.http) : '',
+  erro: primeira ? `HTTP ${primeira.http} em ${falhas.length} de ${grupos.length} chamada(s) da Autotrac` : '',
+} }];
+
+// @no Preparar autorizados
+const r = $('Abrir lote').first().json.r || {};
+const base = String(r.url || '').replace(/\/$/, '');
+return [{ json: { lote: r.lote, url: `${base}/v1/accounts/${r.conta}/authorizedvehicles?_limit=100&_vehicleInAuthorizedListActive=true` } }];
+
+// @no Juntar autorizados
+const frota = $('Juntar frota').first().json;
+let http = 0; const itens = [];
+for (const item of $input.all()) {
+  const j = item.json || {};
+  if (j.error) {
+    const e = j.error;
+    http = Number(e.httpCode || e.statusCode || e.status || (String(e.message || '').match(/\b([45]\d\d)\b/) || [])[1] || 0) || 500;
+  } else itens.push(...(Array.isArray(j.Data) ? j.Data : []));
+}
+const falhas = JSON.parse(frota.falhasJson || '[]');
+if (http) falhas.push({ placa: 'unidades autorizadas', http });
+const primeira = falhas.find((f) => f.http === 401 || f.http === 403) || falhas[0];
+return [{ json: {
+  lote: frota.lote,
+  itensJson: JSON.stringify(http ? [] : itens),
+  aplicar: http ? 'false' : 'true',
+  falhasJson: JSON.stringify(falhas),
+  ok: primeira && (primeira.http === 401 || primeira.http === 403) ? 'false' : (falhas.length ? 'false' : 'true'),
+  http: primeira ? String(primeira.http) : '',
+  erro: primeira ? `HTTP ${primeira.http} ao buscar ${primeira.placa === 'frota' ? 'a frota' : 'as unidades autorizadas'} na Autotrac` : '',
+} }];

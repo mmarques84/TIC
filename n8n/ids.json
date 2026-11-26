@@ -259,5 +259,18 @@
   "TicIngAutotracAc:Gravar frota": "61fd0e85-b3bd-44b8-b993-6d2448e39b6e",
   "TicIngAutotracAc:Fechar lote": "f0e0f4c6-dd87-4d50-af3b-7fd020c2aab6",
   "TicIngAutotracEv:A cada 15 min": "a179b492-7c2f-4e05-9d6e-91953abad87f",
-  "TicIngAutotracAt:A cada 15 min": "08b3c49d-4612-4e55-89ee-144aa1d9d104"
+  "TicIngAutotracAt:A cada 15 min": "08b3c49d-4612-4e55-89ee-144aa1d9d104",
+  "TicSubAutotracGe:Entrada": "39804102-e29f-4b85-bc51-3f671c3bcfc3",
+  "webhook:sub-autotrac-get:esperar": "f37d484f-4641-476a-abc7-d7e2ef87f59a",
+  "TicSubAutotracGe:Esperar": "95aa51cc-76b9-496c-a497-876c217898d3",
+  "TicSubAutotracGe:Buscar": "efe05665-220a-42b9-a64a-4b334fe55876",
+  "TicSubAutotracGe:Juntar paginas": "818174d4-c51b-4979-98c9-1e031fb22499",
+  "TicIngAutotracCa:Preparar autorizados": "d7790bac-a5e8-4cba-addd-5dac0cfa85a5",
+  "TicIngAutotracCa:Buscar autorizados": "14d890cc-3d49-46dc-89b3-055d70e7d4e8",
+  "TicIngAutotracCa:Juntar autorizados": "0ad6a43c-c148-4a1c-8599-baf142d07374",
+  "TicIngAutotracCa:Gravar autorizados": "5eb9bd4b-dc10-4f19-9b58-9b8326494b8e",
+  "TicIngAutotracAc:Preparar autorizados": "432a58a4-aecd-46ce-b7c4-4a441a2b8291",
+  "TicIngAutotracAc:Buscar autorizados": "24742ee5-11ec-4a4b-8243-e95d096a7586",
+  "TicIngAutotracAc:Juntar autorizados": "6c9b3fd1-0fd2-402f-8699-36976b677060",
+  "TicIngAutotracAc:Gravar autorizados": "474a9409-668b-4c78-a678-69eaaf4e71b4"
 }

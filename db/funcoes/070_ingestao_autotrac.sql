@@ -91,6 +91,7 @@ BEGIN
                   ELSE (SELECT max(e.horario) FROM bruto.autotrac_evento e WHERE e.veiculo_id = v.id) END AS ultimo
       FROM cadastro.veiculo v
       WHERE v.ativo AND (CASE WHEN v_atic THEN v.id_autotrac_atic ELSE v.id_autotrac END) IS NOT NULL
+        AND (CASE WHEN v_atic THEN v.autorizado_atic ELSE v.autorizado_telemetria END) IS NOT FALSE  -- R9b
       ORDER BY v.placa
     LOOP
       v_de := coalesce(r.ultimo - v_sobre, p_agora - v_inicio);
@@ -321,4 +322,25 @@ BEGIN
     UPDATE controle.saneamento SET estado = 'resolvido', resolvido_por = p_usuario, resolvido_em = now() WHERE id = s.id;
   END LOOP;
   RETURN jsonb_build_object('criados', v_criados, 'ja_existiam', v_ja);
+END $$;
+
+-- R9b: aplica a lista de unidades autorizadas de uma API (todas as páginas). Marca true quem está, false quem não está.
+CREATE OR REPLACE FUNCTION cadastro.job_autotrac_autorizados(p_lote uuid, p_itens jsonb, p_api text DEFAULT 'telemetria')
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+DECLARE v_sim integer; v_nao integer; v_codigos text[];
+BEGIN
+  IF p_api NOT IN ('telemetria', 'atic') THEN RAISE EXCEPTION 'API_INVALIDA' USING ERRCODE = 'P0001'; END IF;
+  SELECT coalesce(array_agg(DISTINCT i->>'VehicleCode'), '{}') INTO v_codigos
+  FROM jsonb_array_elements(coalesce(p_itens, '[]')) i
+  WHERE i->>'VehicleCode' IS NOT NULL AND (i->>'RemovedTime') IS NULL;
+  IF p_api = 'telemetria' THEN
+    UPDATE cadastro.veiculo SET autorizado_telemetria = (id_autotrac = ANY (v_codigos)) WHERE id_autotrac IS NOT NULL;
+    SELECT count(*) FILTER (WHERE autorizado_telemetria), count(*) FILTER (WHERE NOT autorizado_telemetria) INTO v_sim, v_nao
+    FROM cadastro.veiculo WHERE id_autotrac IS NOT NULL;
+  ELSE
+    UPDATE cadastro.veiculo SET autorizado_atic = (id_autotrac_atic = ANY (v_codigos)) WHERE id_autotrac_atic IS NOT NULL;
+    SELECT count(*) FILTER (WHERE autorizado_atic), count(*) FILTER (WHERE NOT autorizado_atic) INTO v_sim, v_nao
+    FROM cadastro.veiculo WHERE id_autotrac_atic IS NOT NULL;
+  END IF;
+  RETURN jsonb_build_object('na_lista_da_autotrac', cardinality(v_codigos), 'autorizados', v_sim, 'fora_da_lista', v_nao);
 END $$;

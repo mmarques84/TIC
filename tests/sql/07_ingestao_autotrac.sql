@@ -119,6 +119,17 @@ BEGIN
   ASSERT (SELECT NOT senha_mudou AND ultimo_sucesso IS NOT NULL FROM controle.credencial_status WHERE fonte = 'autotrac'), 'sucesso libera';
 END $$;
 
+-- R9b: só os veículos na lista de unidades autorizadas da Autotrac entram no ciclo de eventos.
+DO $$ DECLARE r jsonb; BEGIN
+  r := cadastro.job_autotrac_autorizados(NULL, '[{"VehicleCode": "900001", "RemovedTime": null}, {"VehicleCode": "900007", "RemovedTime": "2026-11-01T00:00:00+00:00"}]', 'telemetria');
+  ASSERT (r->>'autorizados')::int = 1, 'só TST1A01 autorizado: ' || r;
+  ASSERT (SELECT autorizado_telemetria FROM cadastro.veiculo WHERE placa = 'TST4D04') = false, 'removido da lista = fora';
+  r := bruto.job_lote_abrir('autotrac_evento');
+  ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(r->'chamadas') c WHERE c->>'veiculo' = '00000000-0000-7000-8000-00000000a004'), 'fora da lista não é buscado';
+  ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(r->'chamadas') c WHERE c->>'veiculo' = '00000000-0000-7000-8000-00000000a001'), 'autorizado é buscado';
+  PERFORM bruto.job_lote_fechar((r->>'lote')::uuid);
+END $$;
+
 -- R6a: carga da frota a partir do saneamento (placa limpa sem cadastro → veículo com o código ligado).
 DO $$ DECLARE r jsonb; BEGIN
   r := cadastro.job_autotrac_cadastrar_frota(NULL);
