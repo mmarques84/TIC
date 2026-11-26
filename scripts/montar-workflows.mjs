@@ -441,54 +441,64 @@ const sqlPorItem = (no, nome, pos, query, params) =>
     { operation: 'executeQuery', query, options: { queryReplacement: `={{ ${params} }}` } },
     { credentials: PG, onError: 'continueRegularOutput' });
 
-{
-  const { w, no, liga } = novoWorkflow('TicIngAutotracEv', 'ing-autotrac-telemetria');
+// Ciclo por veículo: abrir lote → chamadas → buscar (paginado) → agrupar páginas → gravar por item → resumo → fechar.
+function ingestaoPorVeiculo({ id, nome, fonte, minutos, noChamadas, gravar, fechar }) {
+  const { w, no, liga } = novoWorkflow(id, nome);
   const c = blocos('n8n/codigo/ingestao/autotrac.js');
-  agendar(no, 'A cada 5 min', 5);
-  sql(no, 'Abrir lote', [220, 0], 'SELECT bruto.job_lote_abrir($1) AS r', "['autotrac_evento']");
-  code(no, 'Chamadas', [440, 0], c['Chamadas']);
+  agendar(no, `A cada ${minutos} min`, minutos);
+  no('Executar agora', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, 200], { inputSource: 'passthrough' });
+  sql(no, 'Abrir lote', [220, 0], 'SELECT bruto.job_lote_abrir($1) AS r', `['${fonte}']`);
+  code(no, 'Chamadas', [440, 0], c[noChamadas]);
   buscarAutotrac(no, 'Buscar na Autotrac', [660, 0]);
   code(no, 'Agrupar', [880, 0], c['Agrupar']);
-  sqlPorItem(no, 'Gravar eventos', [1100, 0], 'SELECT bruto.job_autotrac_eventos($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
-    '[$json.lote, $json.veiculo, $json.tipo, $json.itensJson]');
+  sqlPorItem(no, 'Gravar', [1100, 0], gravar, '[$json.lote, $json.veiculo, $json.tipo, $json.itensJson]');
   code(no, 'Resumo do ciclo', [1320, 0], c['Resumo do ciclo']);
-  sql(no, 'Fechar lote', [1540, 0],
-    "SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) AS f, controle.job_credencial('autotrac', $3::boolean, NULLIF($4, '')::int, NULLIF($5, '')) AS c",
-    "[$json.lote, $json.falhasJson, $json.ok, $json.http, $json.erro]");
-  liga('A cada 5 min', ['Abrir lote']);
-  no('Executar agora', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, 200], { inputSource: 'passthrough' });
+  sql(no, 'Fechar lote', [1540, 0], fechar, '[$json.lote, $json.falhasJson, $json.ok, $json.http, $json.erro, $json.lote]');
+  liga(`A cada ${minutos} min`, ['Abrir lote']);
   liga('Executar agora', ['Abrir lote']);
   liga('Abrir lote', ['Chamadas']);
   liga('Chamadas', ['Buscar na Autotrac']);
   liga('Buscar na Autotrac', ['Agrupar']);
-  liga('Agrupar', ['Gravar eventos']);
-  liga('Gravar eventos', ['Resumo do ciclo']);
+  liga('Agrupar', ['Gravar']);
+  liga('Gravar', ['Resumo do ciclo']);
   liga('Resumo do ciclo', ['Fechar lote']);
-  salvar('ing-autotrac-telemetria.json', w);
+  salvar(`${nome}.json`, w);
 }
+const FECHAR = "SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) AS f, controle.job_credencial('autotrac', $3::boolean, NULLIF($4, '')::int, NULLIF($5, '')) AS c";
 
-{
-  const { w, no, liga } = novoWorkflow('TicIngAutotracCa', 'ing-autotrac-cadastro');
+// Telemetria: eventos de condução e de câmera (R9–R15).
+ingestaoPorVeiculo({ id: 'TicIngAutotracEv', nome: 'ing-autotrac-telemetria', fonte: 'autotrac_evento', minutos: 5, noChamadas: 'Chamadas',
+  gravar: 'SELECT bruto.job_autotrac_eventos($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
+  fechar: FECHAR + ', $6::text AS lote' });
+// ATIC (fase B): login, posições e macros; no fim liga macros ao motorista e recalcula a jornada (R16–R19).
+ingestaoPorVeiculo({ id: 'TicIngAutotracAt', nome: 'ing-autotrac-atic', fonte: 'autotrac_atic', minutos: 5, noChamadas: 'Chamadas ATIC',
+  gravar: 'SELECT bruto.job_autotrac_atic($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
+  fechar: FECHAR + ', derivado.job_autotrac_atic_fim($6::uuid) AS j' });
+
+// Frota de hora em hora (R4–R8), uma por API (cada API tem o seu código de veículo).
+function ingestaoFrota({ id, nome, fonte, api }) {
+  const { w, no, liga } = novoWorkflow(id, nome);
   const c = blocos('n8n/codigo/ingestao/autotrac.js');
   agendar(no, 'A cada 60 min', 60);
-  sql(no, 'Abrir lote', [220, 0], 'SELECT bruto.job_lote_abrir($1) AS r', "['autotrac_cadastro']");
+  no('Executar agora', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, 200], { inputSource: 'passthrough' });
+  sql(no, 'Abrir lote', [220, 0], 'SELECT bruto.job_lote_abrir($1) AS r', `['${fonte}']`);
   code(no, 'Preparar frota', [440, 0], c['Preparar frota']);
   buscarAutotrac(no, 'Buscar frota', [660, 0]);
   code(no, 'Juntar frota', [880, 0], c['Juntar frota']);
-  sql(no, 'Gravar frota', [1100, 0], 'SELECT cadastro.job_autotrac_veiculos($1::uuid, $2::jsonb) AS r', '[$json.lote, $json.itensJson]');
-  sql(no, 'Fechar lote', [1320, 0],
-    "SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) AS f, controle.job_credencial('autotrac', $3::boolean, NULLIF($4, '')::int, NULLIF($5, '')) AS c",
+  sql(no, 'Gravar frota', [1100, 0], 'SELECT cadastro.job_autotrac_veiculos($1::uuid, $2::jsonb, $3) AS r', `[$json.lote, $json.itensJson, '${api}']`);
+  sql(no, 'Fechar lote', [1320, 0], FECHAR,
     "[$('Juntar frota').first().json.lote, $('Juntar frota').first().json.falhasJson, $('Juntar frota').first().json.ok, $('Juntar frota').first().json.http, $('Juntar frota').first().json.erro]");
   liga('A cada 60 min', ['Abrir lote']);
-  no('Executar agora', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, 200], { inputSource: 'passthrough' });
   liga('Executar agora', ['Abrir lote']);
   liga('Abrir lote', ['Preparar frota']);
   liga('Preparar frota', ['Buscar frota']);
   liga('Buscar frota', ['Juntar frota']);
   liga('Juntar frota', ['Gravar frota']);
   liga('Gravar frota', ['Fechar lote']);
-  salvar('ing-autotrac-cadastro.json', w);
+  salvar(`${nome}.json`, w);
 }
+ingestaoFrota({ id: 'TicIngAutotracCa', nome: 'ing-autotrac-cadastro', fonte: 'autotrac_cadastro', api: 'telemetria' });
+ingestaoFrota({ id: 'TicIngAutotracAc', nome: 'ing-autotrac-atic-cadastro', fonte: 'autotrac_atic_cadastro', api: 'atic' });
 
 writeFileSync(arqIds, JSON.stringify(ids, null, 2) + '\n');
 

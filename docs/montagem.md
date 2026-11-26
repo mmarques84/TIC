@@ -54,8 +54,8 @@ Usuários do Postgres:
 
 ## Ingestão da Autotrac (spec ingestao-autotrac)
 
-- **VPS:** `AUTOTRAC_USUARIO`, `AUTOTRAC_SENHA` e `AUTOTRAC_CHAVE` no `.env` → `sh scripts/n8n-credencial-autotrac.sh` → `sh scripts/publicar-n8n.sh` (publica e ativa `ing-autotrac-cadastro`, de hora em hora, e `ing-autotrac-telemetria`, a cada 5 min). Os parâmetros `autotrac.url_telemetria` e `autotrac.conta_telemetria` já vêm com a produção.
-- **Computador do dev (sandbox, dados fictícios):** `sh scripts/n8n-credencial-autotrac.sh --sandbox` e, no banco local, `autotrac.url_telemetria` = `https://wapi.autotrac-online.com.br/sandboxtelemetryapi` e `autotrac.conta_telemetria` = `3253`; ligar um veículo fictício ao código `262763`. Nunca usar a credencial real no computador do dev.
+- **VPS:** `AUTOTRAC_USUARIO`, `AUTOTRAC_SENHA` e `AUTOTRAC_CHAVE` no `.env` → `sh scripts/n8n-credencial-autotrac.sh` → `sh scripts/publicar-n8n.sh` (publica e ativa `ing-autotrac-cadastro` e `ing-autotrac-atic-cadastro`, de hora em hora, e `ing-autotrac-telemetria` e `ing-autotrac-atic`, a cada 5 min). Os parâmetros `autotrac.url_*` e `autotrac.conta_*` já vêm com a produção (conferir `autotrac.conta_atic` no primeiro acesso).
+- **Computador do dev (sandbox, dados fictícios):** `sh scripts/n8n-credencial-autotrac.sh --sandbox` e, no banco local, `autotrac.url_telemetria` = `https://wapi.autotrac-online.com.br/sandboxtelemetryapi` e `autotrac.conta_telemetria` = `3253`; `autotrac.url_atic` = `https://wapi.autotrac-online.com.br/sandboxaticapi` e `autotrac.conta_atic` = `801`; ligar um veículo fictício aos códigos `262763` (`id_autotrac`) e `540` (`id_autotrac_atic`). Nunca usar a credencial real no computador do dev.
 - **Forçar uma busca:** `docker compose exec -e N8N_RUNNERS_BROKER_PORT=5699 -e N8N_PORT=5690 n8n n8n execute --id=TicIngAutotracEv` (ou `TicIngAutotracCa`).
 - **Conferir:** `bruto.ingestao_lote` (estado de cada ciclo), `controle.credencial_status` (último sucesso/erro), `controle.saneamento` (o que não casou com o cadastro).
 

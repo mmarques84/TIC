@@ -50,7 +50,7 @@ return [{ json: {
   falhasJson: JSON.stringify(falhas),
   ok: falhas.length === 0 ? 'true' : 'false',
   http: primeira ? String(primeira.http) : '',
-  erro: primeira ? `HTTP ${primeira.http} em ${falhas.length} de ${grupos.length} chamada(s) da API de Telemetria` : '',
+  erro: primeira ? `HTTP ${primeira.http} em ${falhas.length} de ${grupos.length} chamada(s) da Autotrac` : '',
 } }];
 
 // @no Preparar frota
@@ -76,6 +76,24 @@ return [{ json: {
   falhasJson: JSON.stringify(http ? [{ placa: 'frota', http }] : []),
   ok: http ? 'false' : 'true',
   http: http ? String(http) : '',
-  erro: http ? `HTTP ${http} ao buscar a frota na API de Telemetria` : '',
+  erro: http ? `HTTP ${http} ao buscar a frota na Autotrac` : '',
   veiculos: itens.length,
 } }];
+
+// @no Chamadas ATIC
+// Fase B: por veículo × janela, os três recursos da ATIC. Login primeiro (a macro precisa saber quem estava logado).
+// A ATIC exige a data com fuso (+00:00, codificado na URL).
+const r = $input.first().json.r || {};
+if (r.bloqueado || !r.lote) return [];
+const base = String(r.url || '').replace(/\/$/, '');
+const data = (d) => encodeURIComponent(d + '+00:00');
+const out = [];
+for (const c of r.chamadas || []) {
+  for (const tipo of ['driverlogs', 'positions', 'returnmessages']) {
+    out.push({ json: {
+      lote: r.lote, veiculo: c.veiculo, codigo: c.codigo, tipo,
+      url: `${base}/v1/accounts/${r.conta}/vehicles/${c.codigo}/${tipo}?_dateTimeFrom=${data(c.de)}&_dateTimeTo=${data(c.ate)}&_limit=100`,
+    } });
+  }
+}
+return out;

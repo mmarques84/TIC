@@ -121,7 +121,7 @@ END $$;
 
 DO $$ BEGIN
   ASSERT has_function_privilege('tic_n8n', 'bruto.job_autotrac_eventos(uuid,uuid,text,jsonb)', 'EXECUTE'), 'n8n grava eventos';
-  ASSERT has_function_privilege('tic_n8n', 'cadastro.job_autotrac_veiculos(uuid,jsonb)', 'EXECUTE'), 'n8n grava frota';
+  ASSERT has_function_privilege('tic_n8n', 'cadastro.job_autotrac_veiculos(uuid,jsonb,text)', 'EXECUTE'), 'n8n grava frota';
   ASSERT NOT has_function_privilege('tic_n8n', 'controle.int_saneamento(text,text,text,text,jsonb)', 'EXECUTE'), 'int_* fechado';
 END $$;
 ROLLBACK;

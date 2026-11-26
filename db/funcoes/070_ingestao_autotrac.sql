@@ -70,6 +70,8 @@ DECLARE
   v_limite timestamptz := p_agora - make_interval(days => controle.fn_parametro_num('autotrac.retencao_dias')::integer);
   v_chamadas jsonb := '[]'; v_perdas jsonb := '[]';
   r record; v_de timestamptz; v_ate timestamptz;
+  -- ATIC (fase B): posições, macros e logins, pelo código da ATIC; a "última" é a última posição recebida.
+  v_atic boolean := p_fonte IN ('autotrac_atic', 'autotrac_atic_cadastro');
 BEGIN
   SELECT senha_mudou INTO v_senha FROM controle.credencial_status WHERE fonte = 'autotrac';
   IF coalesce(v_senha, false) THEN
@@ -78,11 +80,13 @@ BEGIN
 
   INSERT INTO bruto.ingestao_lote (fonte, inicio) VALUES (p_fonte, p_agora) RETURNING id INTO v_lote;
 
-  IF p_fonte = 'autotrac_evento' THEN
+  IF p_fonte IN ('autotrac_evento', 'autotrac_atic') THEN
     FOR r IN
-      SELECT v.id, v.id_autotrac, (SELECT max(e.horario) FROM bruto.autotrac_evento e WHERE e.veiculo_id = v.id) AS ultimo
+      SELECT v.id, CASE WHEN v_atic THEN v.id_autotrac_atic ELSE v.id_autotrac END AS id_autotrac,
+             CASE WHEN v_atic THEN (SELECT max(p.horario) FROM bruto.autotrac_posicao p WHERE p.veiculo_id = v.id)
+                  ELSE (SELECT max(e.horario) FROM bruto.autotrac_evento e WHERE e.veiculo_id = v.id) END AS ultimo
       FROM cadastro.veiculo v
-      WHERE v.ativo AND v.id_autotrac IS NOT NULL
+      WHERE v.ativo AND (CASE WHEN v_atic THEN v.id_autotrac_atic ELSE v.id_autotrac END) IS NOT NULL
       ORDER BY v.placa
     LOOP
       v_de := coalesce(r.ultimo - v_sobre, p_agora - v_inicio);
@@ -111,8 +115,8 @@ BEGIN
   END IF;
 
   RETURN jsonb_build_object('lote', v_lote, 'bloqueado', false,
-    'url', controle.fn_parametro('autotrac.url_telemetria') #>> '{}',
-    'conta', controle.fn_parametro_num('autotrac.conta_telemetria')::bigint,
+    'url', controle.fn_parametro(CASE WHEN v_atic THEN 'autotrac.url_atic' ELSE 'autotrac.url_telemetria' END) #>> '{}',
+    'conta', controle.fn_parametro_num(CASE WHEN v_atic THEN 'autotrac.conta_atic' ELSE 'autotrac.conta_telemetria' END)::bigint,
     'chamadas', v_chamadas, 'perdas', v_perdas);
 END $$;
 
@@ -137,17 +141,22 @@ END $$;
 
 -- R4–R8: aplica a lista completa de veículos da Autotrac (todas as páginas de uma vez, para achar placa repetida).
 -- Liga o código só quando a placa existe, não está repetida, não tem anotação e não há conflito. Nunca cria nem desativa veículo.
-CREATE OR REPLACE FUNCTION cadastro.job_autotrac_veiculos(p_lote uuid, p_itens jsonb)
+-- p_api: 'telemetria' (liga id_autotrac) ou 'atic' (liga id_autotrac_atic; a placa vem de LicensePlate e, se faltar, do nome).
+DROP FUNCTION IF EXISTS cadastro.job_autotrac_veiculos(uuid, jsonb);
+CREATE OR REPLACE FUNCTION cadastro.job_autotrac_veiculos(p_lote uuid, p_itens jsonb, p_api text DEFAULT 'telemetria')
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
 #variable_conflict use_column
 DECLARE
   r record; v_veiculo uuid; v_atual text; v_dono uuid;
   v_ligados integer := 0; v_iguais integer := 0; v_saneamento integer := 0;
+  v_atic boolean := p_api = 'atic';
+  v_pre text := CASE WHEN p_api = 'atic' THEN 'atic:' ELSE '' END;  -- chave do saneamento por API (o código muda de uma para outra)
 BEGIN
+  IF p_api NOT IN ('telemetria', 'atic') THEN RAISE EXCEPTION 'API_INVALIDA' USING ERRCODE = 'P0001'; END IF;
   FOR r IN
     WITH itens AS (
       SELECT i->>'Code' AS codigo, i->>'Name' AS nome, i->>'Address' AS equipamento,
-             cadastro.fn_placa_de_nome(i->>'Name') AS placa,
+             coalesce(cadastro.fn_placa_de_nome(i->>'LicensePlate'), cadastro.fn_placa_de_nome(i->>'Name')) AS placa,
              (i->>'Name') ~* '(vendido|antiga)' AS anotado
       FROM jsonb_array_elements(coalesce(p_itens, '[]')) i
       WHERE i->>'Code' IS NOT NULL
@@ -155,13 +164,13 @@ BEGIN
     SELECT x.*, count(*) FILTER (WHERE NOT x.anotado) OVER (PARTITION BY x.placa) AS repetidas FROM itens x
   LOOP
     IF r.placa IS NULL THEN
-      PERFORM controle.int_saneamento('autotrac', 'veiculo_sem_placa', r.codigo,
+      PERFORM controle.int_saneamento('autotrac', 'veiculo_sem_placa', v_pre || r.codigo,
         'Veículo da Autotrac sem placa no nome: "' || coalesce(r.nome, '') || '" (equipamento ' || coalesce(r.equipamento, '?') || ')',
         jsonb_build_object('codigo', r.codigo, 'nome', r.nome, 'equipamento', r.equipamento));
       v_saneamento := v_saneamento + 1; CONTINUE;
     END IF;
     IF r.anotado THEN
-      PERFORM controle.int_saneamento('autotrac', 'veiculo_anotado', r.codigo,
+      PERFORM controle.int_saneamento('autotrac', 'veiculo_anotado', v_pre || r.codigo,
         'Veículo da Autotrac com anotação no nome: "' || r.nome || '" (placa ' || r.placa || '); código não foi ligado',
         jsonb_build_object('codigo', r.codigo, 'nome', r.nome, 'placa', r.placa));
       v_saneamento := v_saneamento + 1; CONTINUE;
@@ -173,7 +182,7 @@ BEGIN
       v_saneamento := v_saneamento + 1; CONTINUE;
     END IF;
 
-    SELECT id, id_autotrac INTO v_veiculo, v_atual FROM cadastro.veiculo WHERE placa = r.placa;
+    SELECT id, CASE WHEN v_atic THEN id_autotrac_atic ELSE id_autotrac END INTO v_veiculo, v_atual FROM cadastro.veiculo WHERE placa = r.placa;
     IF v_veiculo IS NULL THEN
       PERFORM controle.int_saneamento('autotrac', 'placa_sem_cadastro', r.placa,
         'Placa ' || r.placa || ' está na Autotrac e não está no cadastro do painel',
@@ -183,15 +192,18 @@ BEGIN
 
     IF v_atual = r.codigo THEN v_iguais := v_iguais + 1; CONTINUE; END IF;
 
-    SELECT id INTO v_dono FROM cadastro.veiculo WHERE id_autotrac = r.codigo AND id <> v_veiculo;
+    SELECT id INTO v_dono FROM cadastro.veiculo WHERE (CASE WHEN v_atic THEN id_autotrac_atic ELSE id_autotrac END) = r.codigo AND id <> v_veiculo;
     IF v_atual IS NOT NULL OR v_dono IS NOT NULL THEN
-      PERFORM controle.int_saneamento('autotrac', 'codigo_em_conflito', r.codigo,
+      PERFORM controle.int_saneamento('autotrac', 'codigo_em_conflito', v_pre || r.codigo,
         'Código ' || r.codigo || ' da Autotrac (placa ' || r.placa || ') conflita com o cadastro; nada foi alterado',
         jsonb_build_object('codigo', r.codigo, 'placa', r.placa, 'codigo_atual_da_placa', v_atual));
       v_saneamento := v_saneamento + 1; CONTINUE;
     END IF;
 
-    UPDATE cadastro.veiculo SET id_autotrac = r.codigo, atualizado_em = now() WHERE id = v_veiculo;
+    UPDATE cadastro.veiculo
+    SET id_autotrac = CASE WHEN v_atic THEN id_autotrac ELSE r.codigo END,
+        id_autotrac_atic = CASE WHEN v_atic THEN r.codigo ELSE id_autotrac_atic END, atualizado_em = now()
+    WHERE id = v_veiculo;
     v_ligados := v_ligados + 1;
   END LOOP;
 

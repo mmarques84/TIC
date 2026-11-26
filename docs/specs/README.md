@@ -5,7 +5,7 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | Spec | Marco | Status | Depende de |
 |---|---|---|---|
 | [seguranca-acesso.md](seguranca-acesso.md) | 1 | rascunho (login, me e logout implementados localmente) | — |
-| [ingestao-autotrac.md](ingestao-autotrac.md) | 2 | Telemetria implementada localmente (26/11); ATIC na fase B | estudo em `../estudo-api-atic.md`; mapa de eventos (Michael/Rafael) |
+| [ingestao-autotrac.md](ingestao-autotrac.md) | 2 | implementada localmente (26/11): Telemetria e ATIC, testadas com o sandbox | estudo em `../estudo-api-atic.md`; mapa de eventos (Michael/Rafael) |
 | ingestao-moovsec.md | 2 | a criar (estudo da API em `../estudo-api-moovsec.md`, 26/11) | URL do Moovsec da TIC, usuário de integração |
 | correlacao.md | 2 | a criar | ingestões |
 | parametros.md | 2 | a criar | limites por operação (Michael) |

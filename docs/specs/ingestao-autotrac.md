@@ -1,7 +1,7 @@
 # Spec: Ingestão da Autotrac
 
-**Status:** fase Telemetria implementada localmente (26/11; spec aprovada pelo Marcus em 26/11); fase B (ATIC) a fazer · **Marco:** 2 · **Atualizada em:** 2026-11-26
-**Telas:** nenhuma nova (status na tela Admin · Integrações, spec `admin.md`) · **Tabelas:** lê e grava `cadastro.veiculo`, `cadastro.motorista`, `bruto.ingestao_lote`, `bruto.autotrac_evento`, `bruto.autotrac_posicao`, `bruto.autotrac_macro`, `bruto.autotrac_login`, `controle.credencial_status`; novas `controle.evento_mapa`, `controle.saneamento` · **Workflows:** `ing-autotrac-cadastro`, `ing-autotrac-telemetria`, `ing-autotrac-atic` (fase B), `sub-autotrac` · **Funções:** `job_autotrac_veiculos`, `job_autotrac_eventos`, `job_autotrac_posicoes`, `job_autotrac_macros`, `job_autotrac_logins`, `job_lote_abrir`, `job_lote_fechar`
+**Status:** implementada localmente (26/11; spec aprovada pelo Marcus em 26/11): Telemetria e fase B (ATIC), com sandbox · **Marco:** 2 · **Atualizada em:** 2026-11-26
+**Telas:** nenhuma nova (status na tela Admin · Integrações, spec `admin.md`) · **Tabelas:** lê e grava `cadastro.veiculo`, `cadastro.motorista`, `bruto.ingestao_lote`, `bruto.autotrac_evento`, `bruto.autotrac_posicao`, `bruto.autotrac_macro`, `bruto.autotrac_login`, `controle.credencial_status`; novas `controle.evento_mapa`, `controle.saneamento` · **Workflows:** `ing-autotrac-cadastro`, `ing-autotrac-telemetria`, `ing-autotrac-atic-cadastro`, `ing-autotrac-atic` · **Funções:** `job_autotrac_veiculos`, `job_autotrac_eventos`, `job_autotrac_posicoes`, `job_autotrac_macros`, `job_autotrac_logins`, `job_lote_abrir`, `job_lote_fechar`
 **Base:** `../estudo-api-atic.md` (as duas APIs, o que os painéis do Rafael usam, o mapa de macros), roteiro V2 (Autotrac é a fonte da verdade da jornada; de-para com fila de saneamento no Admin).
 
 ## O que faz
@@ -34,7 +34,9 @@ Traz os dados da Autotrac para o banco do painel, sozinha, de tempos em tempos, 
 **Fase B: API ATIC (quando liberada)**
 - **R16.** Posições (`positions`) a cada `autotrac.atic.intervalo_min` (padrão 5), com as mesmas regras R9–R11; hodômetro **÷ 100**; `DirectionGPS` inválido é descartado; janela máxima 72 h.
 - **R17.** Macros (`returnmessages` com `MacroNumber > 0`) → `bruto.autotrac_macro`; o significado vem de `controle.macro_mapa` (o motor já usa). Mensagem livre (`MacroNumber = 0`) não entra.
-- **R18.** Login e logout (`driverlogs`) → `bruto.autotrac_login`; `LogoutTime` em 1970 = ainda logado (não grava logout).
+- **R18.** Login e logout (`driverlogs`) → `bruto.autotrac_login`; `LogoutTime` em 1970 = ainda logado (não grava logout). O login da ATIC **não traz código do motorista**, só nome e CPF: liga pelo nome (exatamente um motorista ativo com esse nome, sem diferença de maiúscula/espaço); senão vai para o saneamento. Provisório até a decisão sobre o CPF (Em aberto). Os logins viram `derivado.sessao_motorista` (quem dirigia, de um login até o próximo logout ou login), que dá o motorista de cada macro.
+- **R18a.** Cada API tem o seu código de veículo: Telemetria em `cadastro.veiculo.id_autotrac`, ATIC em `id_autotrac_atic`. Na frota da ATIC a placa vem do campo `LicensePlate` (e do nome, se faltar).
+- **R18b.** Macro com número sem significado em `controle.macro_mapa` é gravada e vai para o saneamento (`macro_sem_mapa`): é assim que os números reais das macros da TIC aparecem para alguém mapear.
 - **R19.** Depois de gravar macros e logins de um ciclo, chama o motor de jornada (`job_jornada`) só para os motoristas afetados.
 
 **Registro**
@@ -74,7 +76,7 @@ O n8n só busca e entrega a lista; **toda regra (placa, mapa, deduplicação, sa
 - [x] **V11 (R20).** Falha num veículo (simulada) → os outros gravam e o lote fecha como `erro` citando o veículo.
 - [x] **V12 (manual).** Contra o **sandbox** da Autotrac: ciclo completo grava veículos e eventos fictícios.
 - [ ] **V13 (manual).** Contra a **produção** (o Marcus roda): contagem de veículos e de eventos das últimas 24 h bate com o que o Postman mostra.
-- [ ] **V14 (R16–R19, fase B).** Posições com hodômetro ÷ 100; macro 0 ignorada; logout de 1970 não gravado; motor recalcula o motorista afetado.
+- [x] **V14 (R16–R19, fase B).** Posições com hodômetro ÷ 100; macro 0 ignorada; logout de 1970 não gravado; motor recalcula o motorista afetado.
 
 ## Fora do escopo
 
@@ -91,3 +93,5 @@ Enviar mensagem ou acionar sirene (a API não faz; prova técnica do Marco 1 em 
 - [ ] **Datas:** confirmar se a Telemetria interpreta `_dateTimeFrom` sem fuso como UTC (a documentação diz UTC; conferir no V13).
 
 Conferido em 26/11/2026 (local): V1–V9 e V11 em `tests/sql/07_ingestao_autotrac.sql` (7/7 conjuntos ok); V12 com os workflows `ing-autotrac-cadastro` e `ing-autotrac-telemetria` no n8n local contra o sandbox da Autotrac (credencial fictícia): frota buscada, os 2 veículos sem placa foram para o saneamento; eventos de telemetria e de câmera buscados e descartados por estarem fora dos 7 dias (o sandbox devolve eventos de 2024). Ajustes vindos do teste: a paginação para também quando a página vem com menos de 100 registros (o sandbox ignora `_offset`) e erro sem código HTTP conta como falha. **Não conferido:** V10 (procurar a senha nos logs: só com a credencial real), V13 (produção, quem roda é o Marcus) e V14 (fase B). Os workflows têm também o gatilho "Executar agora" para forçar uma busca.
+
+Conferido em 26/11/2026 (local), fase B: V14 em `tests/sql/08_ingestao_atic.sql` (8/8 conjuntos ok): frota pelo `LicensePlate`, códigos separados por API, login ligado pelo nome (homônimo vai para o saneamento), logout de 1970 ignorado, sessão aberta, posição com hodômetro ÷ 100, macro 0 ignorada, macro com o motorista da sessão, macro sem mapa no saneamento, fim do ciclo liga a macro atrasada e recalcula a jornada. Workflows `ing-autotrac-atic-cadastro` e `ing-autotrac-atic` contra o sandbox da ATIC: 9 chamadas ok, posição e macro gravadas, logins de 2018 descartados, macro 27 no saneamento.
