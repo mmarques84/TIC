@@ -490,11 +490,11 @@ function ingestaoPorVeiculo({ id, nome, fonte, minutos, noChamadas, gravar, fech
 }
 
 // Telemetria: eventos de condução e de câmera (R9–R15).
-ingestaoPorVeiculo({ id: 'TicIngAutotracEv', nome: 'ing-autotrac-telemetria', fonte: 'autotrac_evento', minutos: 15, noChamadas: 'Chamadas',
+ingestaoPorVeiculo({ id: 'TicIngAutotracEv', nome: 'ing-autotrac-telemetria', fonte: 'autotrac_evento', minutos: 30, noChamadas: 'Chamadas',
   gravar: 'SELECT bruto.job_autotrac_eventos($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
   fechar: fecharSql('autotrac') + ', $6::text AS lote' });
 // ATIC (fase B): login, posições e macros; no fim liga macros ao motorista e recalcula a jornada (R16–R19).
-ingestaoPorVeiculo({ id: 'TicIngAutotracAt', nome: 'ing-autotrac-atic', fonte: 'autotrac_atic', minutos: 15, noChamadas: 'Chamadas ATIC',
+ingestaoPorVeiculo({ id: 'TicIngAutotracAt', nome: 'ing-autotrac-atic', fonte: 'autotrac_atic', minutos: 30, noChamadas: 'Chamadas ATIC',
   gravar: 'SELECT bruto.job_autotrac_atic($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
   fechar: fecharSql('autotrac_atic') + ', derivado.job_autotrac_atic_fim($6::uuid) AS j' });
 

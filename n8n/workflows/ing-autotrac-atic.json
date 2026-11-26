@@ -3,8 +3,8 @@
   "name": "ing-autotrac-atic",
   "nodes": [
     {
-      "id": "08b3c49d-4612-4e55-89ee-144aa1d9d104",
-      "name": "A cada 15 min",
+      "id": "4946c55e-78db-4f55-b8a5-4adc0d244dcd",
+      "name": "A cada 30 min",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -16,7 +16,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": 15
+              "minutesInterval": 30
             }
           ]
         }
@@ -168,7 +168,7 @@
     }
   ],
   "connections": {
-    "A cada 15 min": {
+    "A cada 30 min": {
       "main": [
         [
           {

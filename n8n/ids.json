@@ -272,5 +272,7 @@
   "TicIngAutotracAc:Preparar autorizados": "432a58a4-aecd-46ce-b7c4-4a441a2b8291",
   "TicIngAutotracAc:Buscar autorizados": "24742ee5-11ec-4a4b-8243-e95d096a7586",
   "TicIngAutotracAc:Juntar autorizados": "6c9b3fd1-0fd2-402f-8699-36976b677060",
-  "TicIngAutotracAc:Gravar autorizados": "474a9409-668b-4c78-a678-69eaaf4e71b4"
+  "TicIngAutotracAc:Gravar autorizados": "474a9409-668b-4c78-a678-69eaaf4e71b4",
+  "TicIngAutotracEv:A cada 30 min": "d6304a2e-35eb-48f1-8233-d75efe3ee9e7",
+  "TicIngAutotracAt:A cada 30 min": "4946c55e-78db-4f55-b8a5-4adc0d244dcd"
 }

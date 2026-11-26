@@ -90,6 +90,14 @@ Consequências:
 6. Existe recurso para **enviar mensagem e acionar sirene**? Se não, como fazer a prova técnica do Marco 1?
 7. Os veículos estão com **"OBC ativo"** (necessário para os alertas expandidos)?
 
+## Visto em produção (VPS, 26/11/2026)
+
+- **Limite de chamadas:** HTTP 429 "Rate limit is exceeded" com chamadas seguidas. Ritmo que funciona: uma chamada a cada ~1,5 s (sub-workflow `sub-autotrac-get`); ciclo de 186 veículos × 2 = 17 min → intervalo de 30 min.
+- **Unidades autorizadas:** veículo fora da lista responde 422 "O equipamento não está na lista de unidades autorizadas". Na Telemetria: 186 dos 188 veículos cadastrados estão na lista.
+- **A chave atual não vale para a ATIC** (401 "invalid subscription key"): pedir a chave da ATIC.
+- **Volume:** ~30 mil eventos de telemetria por dia (72% "temporizado").
+- **Eventos sem documentação** (números acima de 24, gravados como "desconhecido"): 49 (2.860/dia), 28 (399), 39 (163), 41 (22), 30 (13), 37 (10), 26 (7), 43 (6), 47 (1). **Pedir à Autotrac o significado.**
+
 ## Teste de conexão
 
 `scripts/testar-atic.mjs` (Node 18+): sem variáveis testa o sandbox; com `ATIC_URL`, `ATIC_CHAVE`, `ATIC_USUARIO` e `ATIC_SENHA` no ambiente testa a produção. Só faz GET e mostra status, quantidades e nomes de campo (nada de nome, CPF ou placa). Sandbox conferido em 25/11/2026: os 9 recursos responderam 200.

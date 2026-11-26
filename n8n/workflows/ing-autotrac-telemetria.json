@@ -3,8 +3,8 @@
   "name": "ing-autotrac-telemetria",
   "nodes": [
     {
-      "id": "a179b492-7c2f-4e05-9d6e-91953abad87f",
-      "name": "A cada 15 min",
+      "id": "d6304a2e-35eb-48f1-8233-d75efe3ee9e7",
+      "name": "A cada 30 min",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -16,7 +16,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": 15
+              "minutesInterval": 30
             }
           ]
         }
@@ -168,7 +168,7 @@
     }
   ],
   "connections": {
-    "A cada 15 min": {
+    "A cada 30 min": {
       "main": [
         [
           {
