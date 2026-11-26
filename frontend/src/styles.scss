@@ -1,9 +1,8 @@
 @use 'styles/componentes';
 // Fonte servida pelo próprio portal (sem Google Fonts: a CSP só permite 'self').
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
+@import '@fontsource/titillium-web/400.css';
+@import '@fontsource/titillium-web/600.css';
+@import '@fontsource/titillium-web/700.css';
 @import 'styles/tokens.css';
 
 *,
@@ -28,15 +27,15 @@ body {
 }
 
 a {
-  color: var(--tic-marinho);
+  color: var(--tic-azul);
 }
 
 a:hover {
-  color: var(--tic-marinho-escuro);
+  color: var(--tic-azul-escuro);
 }
 
 :focus-visible {
-  outline: 3px solid var(--tic-ouro);
+  outline: 3px solid var(--tic-amarelo);
   outline-offset: 2px;
 }
 

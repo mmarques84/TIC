@@ -87,7 +87,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 18px;
-  border-bottom: 1px solid #e6ebf2;
+  border-bottom: 1px solid var(--tic-linha-suave);
 
   h2 {
     margin: 0;
@@ -166,13 +166,13 @@
   width: 8px;
   height: 8px;
   border-radius: 4px;
-  background: #8a96a8;
+  background: var(--tic-marca-limite);
 
   &.ok {
     background: var(--tic-ok-texto);
   }
   &.atraso {
-    background: #b7791f;
+    background: var(--tic-medio-barra);
   }
   &.erro {
     background: var(--tic-critico-borda);

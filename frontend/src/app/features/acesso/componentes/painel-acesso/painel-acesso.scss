@@ -6,7 +6,7 @@
 
 .marca {
   background: var(--tic-marinho);
-  color: #fff;
+  color: var(--tic-sobre-marinho);
   padding: 64px 72px;
   display: flex;
   flex-direction: column;
@@ -23,7 +23,7 @@
 .divisor {
   width: 1px;
   height: 32px;
-  background: #3a5278;
+  background: var(--tic-marinho-linha);
 }
 
 .nome {
@@ -58,7 +58,7 @@
 .traco {
   width: 56px;
   height: 4px;
-  background: var(--tic-ouro);
+  background: var(--tic-amarelo);
   border-radius: 2px;
 }
 

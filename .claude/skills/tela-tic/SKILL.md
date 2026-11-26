@@ -37,6 +37,7 @@ features/<tela>/componentes/  componentes da tela
 ```
 - Componente nunca usa `HttpClient`; chama a store, que chama `dados/`.
 - Componente genérico vai para `ui/` com prefixo `tic-`. Cores só por tokens `var(--tic-*)`. Nível/gravidade sempre com **rótulo escrito** além da cor.
+- Paleta e fonte oficiais da TIC (Roteiro V2, 24/11/2026), em `frontend/src/styles/tokens.css`: **marinho** `--tic-marinho` (#1F2F58) em menu, títulos e dados principais; **azul** `--tic-azul` (#337AB7) em links, IA e séries secundárias; **amarelo** `--tic-amarelo` (#F5B201) só em filtros, botões e atenção, sempre com texto em marinho. Fonte **Titillium Web** 400/600/700 (Tahoma de reserva), servida pelo portal. Ordem do menu: Central de alertas, Cockpit gerencial, Cockpit OPI, Jornada, Torre de chegadas, Consumo de IA, Admin.
 - Esconder o que o perfil não pode (via `/api/auth/me`); o backend continua bloqueando.
 - Estados: carregando, vazio, erro, sem permissão. Textos em português com o vocabulário da TIC.
 

@@ -2,7 +2,7 @@
 .tv { min-height: 100vh; background: #0b1220; color: #e8edf7; display: flex; flex-direction: column; gap: 2.2vh; padding: 3vh 2.5vw; font-size: 1.4vw; }
 header { display: flex; justify-content: space-between; align-items: center; }
 .marca { display: flex; align-items: center; gap: 1.2vw; h1 { margin: 0; font-size: 2.3vw; font-weight: 700; } }
-.hora { display: flex; align-items: baseline; gap: 1.2vw; span { font-size: 1.15vw; color: #8b97b0; } b { font-size: 2.9vw; color: #ffc83d; font-variant-numeric: tabular-nums; } }
+.hora { display: flex; align-items: baseline; gap: 1.2vw; span { font-size: 1.15vw; color: #8b97b0; } b { font-size: 2.9vw; color: var(--tic-amarelo); font-variant-numeric: tabular-nums; } }
 .parada { background: #5c1a1e; color: #fff; font-size: 1.6vw; font-weight: 700; padding: 1.6vh 1.5vw; border-radius: 12px; }
 .contadores { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1vw; }
 .c { border-radius: 14px; padding: 1.6vh 1.3vw; display: flex; flex-direction: column;
@@ -16,7 +16,7 @@ header { display: flex; justify-content: space-between; align-items: center; }
   padding: 2vh 1.3vw; border-top: 2px solid #1f2b44; background: #111a2c; font-size: 1.35vw;
   &.par { background: #0e1626; } &.critico { box-shadow: inset 8px 0 0 #e5484d; }
   &.cab { border-top: 0; font-size: 0.95vw; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #8b97b0; padding: 1.4vh 1.3vw; } }
-.tit { font-weight: 600; } .placa { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-weight: 700; color: #ffc83d; }
+.tit { font-weight: 600; } .placa { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-weight: 700; color: var(--tic-amarelo); }
 .sec { color: #b7c2d6; } .peq { font-size: 1.15vw; } .num { font-variant-numeric: tabular-nums; }
 .selo { display: inline-flex; justify-content: center; padding: 0.5vh 0.7vw; border-radius: 10px; font-size: 1.15vw; font-weight: 700;
   &.critico { background: #e5484d; color: #fff; } &.grave { background: #5c1a1e; color: #ffb3b6; }

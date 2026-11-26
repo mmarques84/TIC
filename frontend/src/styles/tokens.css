@@ -1,14 +1,20 @@
 /* Design system TIC: cores, espaços, raios e fontes. Componentes usam SÓ estas variáveis.
-   Base provisória (formulário OPI da TIC): azul-marinho + amarelo-ouro. Trocar quando chegar o manual de marca. */
+   Paleta e fonte oficiais da TIC (Roteiro Técnico V2, cap. "Mockups das Telas", 24/11/2026):
+   marinho em menu, títulos e dados principais; azul em links, IA e séries secundárias;
+   amarelo só em filtros, botões e atenção, sempre com texto em marinho. */
 :root {
   /* marca */
-  --tic-marinho: #13294b;
-  --tic-marinho-escuro: #0b1a30;
-  --tic-marinho-medio: #1f3a63;
-  --tic-marinho-linha: #2b4670;
-  --tic-marinho-texto-suave: #c9d4e5;
-  --tic-marinho-texto-apagado: #8fa3c0;
-  --tic-ouro: #e8a317; /* só fundo de selo, foco e destaque: nunca texto sobre branco */
+  --tic-marinho: #1f2f58;
+  --tic-marinho-escuro: #15203d;
+  --tic-marinho-medio: #2c3f70;
+  --tic-marinho-linha: #3a4d7e;
+  --tic-marinho-texto-suave: #c8d1e6;
+  --tic-marinho-texto-apagado: #8e9bbd;
+  --tic-sobre-marinho: #ffffff;
+  --tic-azul: #337ab7; /* links, IA e séries secundárias */
+  --tic-azul-escuro: #285f8f;
+  --tic-amarelo: #f5b201; /* filtros, botões e atenção; texto por cima sempre em marinho */
+  --tic-amarelo-escuro: #dc9f00;
 
   /* superfícies e texto */
   --tic-fundo: #f4f6f9;
@@ -18,13 +24,18 @@
   --tic-borda-campo: #b9c5d4;
   --tic-texto: #1b2430;
   --tic-texto-secundario: #5b6b7f;
+  --tic-linha-suave: #e6ebf2;
+  --tic-hover: #f8fafc;
+  --tic-marca-limite: #8a96a8;
 
   /* níveis (sempre com rótulo escrito) */
   --tic-critico-fundo: #fdecec;
   --tic-critico-texto: #9f1d1d;
   --tic-critico-borda: #c53030;
+  --tic-critico-linha: #f3b8b8;
   --tic-medio-fundo: #fff4db;
   --tic-medio-texto: #7a4b00;
+  --tic-medio-barra: #b7791f;
   --tic-leve-fundo: #eaf1fb;
   --tic-leve-texto: #1f4e8c;
   --tic-ok-fundo: #e7f6ee;
@@ -37,5 +48,5 @@
   --tic-raio: 10px;
   --tic-raio-g: 16px;
   --tic-toque-min: 44px;
-  --tic-fonte: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --tic-fonte: 'Titillium Web', Tahoma, 'Segoe UI', system-ui, sans-serif;
 }

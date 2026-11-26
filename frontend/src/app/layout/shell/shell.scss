@@ -6,7 +6,7 @@
 
 .menu {
   background: var(--tic-marinho);
-  color: #fff;
+  color: var(--tic-sobre-marinho);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -60,7 +60,7 @@
     cursor: pointer;
 
     &:hover {
-      color: #fff;
+      color: var(--tic-sobre-marinho);
       background: var(--tic-marinho-medio);
     }
   }
@@ -93,21 +93,21 @@
   min-height: 40px;
   padding: 0 12px;
   border-radius: var(--tic-raio-p);
-  color: #dce4ef;
+  color: var(--tic-marinho-texto-suave);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
 
   &:hover {
     background: var(--tic-marinho-medio);
-    color: #fff;
+    color: var(--tic-sobre-marinho);
   }
 
   &.ativo {
     background: var(--tic-marinho-medio);
-    color: #fff;
+    color: var(--tic-sobre-marinho);
     font-weight: 600;
-    box-shadow: inset 3px 0 0 var(--tic-ouro);
+    box-shadow: inset 3px 0 0 var(--tic-amarelo);
   }
 
   &.em-breve {
@@ -115,7 +115,7 @@
 
     small {
       font-size: 11px;
-      border: 1px solid #3a5278;
+      border: 1px solid var(--tic-marinho-linha);
       border-radius: 10px;
       padding: 2px 8px;
     }

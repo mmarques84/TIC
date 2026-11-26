@@ -13,33 +13,30 @@ export interface GrupoMenu {
   itens: ItemMenu[];
 }
 
+// Ordem do Roteiro Técnico V2 (24/11/2026): Central de alertas, Cockpit gerencial, Cockpit OPI, Jornada,
+// Torre de chegadas, Consumo de IA e Admin. O que não está no roteiro fica em "Apoio".
 export const MENU: GrupoMenu[] = [
   { nome: 'Geral', itens: [{ rotulo: 'Início', rota: '/inicio', permissao: null }] },
   {
-    nome: 'Operação',
+    nome: 'Painéis',
     itens: [
       { rotulo: 'Central de alertas', rota: '/alertas', permissao: 'alerta.ver' },
+      { rotulo: 'Cockpit gerencial', rota: '/cockpit', permissao: 'cockpit.ver' },
+      { rotulo: 'Cockpit OPI', rota: '/opi', permissao: 'opi.ver' },
       { rotulo: 'Jornada', rota: '/jornada', permissao: 'jornada.ver' },
       { rotulo: 'Torre de chegadas', rota: '/torre', permissao: 'torre.ver' },
-      { rotulo: 'Entregas', rota: '/entregas', permissao: 'torre.ver', emBreve: true },
-    ],
-  },
-  {
-    nome: 'Frota e segurança',
-    itens: [
-      { rotulo: 'OPI', rota: '/opi', permissao: 'opi.ver' },
-      { rotulo: 'Validar triagem da IA', rota: '/triagem', permissao: 'triagem.validar' },
-    ],
-  },
-  {
-    nome: 'Gestão',
-    itens: [
-      { rotulo: 'Cockpit gerencial', rota: '/cockpit', permissao: 'cockpit.ver' },
       { rotulo: 'Consumo de IA', rota: '/consumo-ia', permissao: 'consumo_ia.ver' },
     ],
   },
   {
-    nome: 'Administração',
+    nome: 'Apoio',
+    itens: [
+      { rotulo: 'Validar triagem da IA', rota: '/triagem', permissao: 'triagem.validar' },
+      { rotulo: 'Entregas', rota: '/entregas', permissao: 'torre.ver', emBreve: true },
+    ],
+  },
+  {
+    nome: 'Admin',
     itens: [
       { rotulo: 'Usuários e perfis', rota: '/admin/usuarios', permissao: 'usuario.gerir' },
       { rotulo: 'Parâmetros das regras', rota: '/admin/parametros', permissao: 'parametro.ver' },

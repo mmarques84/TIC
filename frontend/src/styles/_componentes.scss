@@ -42,9 +42,9 @@
   padding: 0 20px;
   border: 0;
   border-radius: var(--tic-raio);
-  background: var(--tic-marinho);
-  color: #fff;
-  font: 600 16px var(--tic-fonte);
+  background: var(--tic-amarelo);
+  color: var(--tic-marinho);
+  font: 700 16px var(--tic-fonte);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -52,8 +52,8 @@
   text-decoration: none;
 
   &:hover {
-    background: var(--tic-marinho-escuro);
-    color: #fff;
+    background: var(--tic-amarelo-escuro);
+    color: var(--tic-marinho);
   }
 
   &:disabled {
@@ -83,7 +83,7 @@
 
   &.erro {
     background: var(--tic-critico-fundo);
-    border: 1px solid #f3b8b8;
+    border: 1px solid var(--tic-critico-linha);
     color: var(--tic-critico-texto);
   }
 
@@ -150,7 +150,7 @@
 .tic-botao-perigo {
   height: var(--tic-toque-min);
   padding: 0 16px;
-  border: 1px solid #f3b8b8;
+  border: 1px solid var(--tic-critico-linha);
   border-radius: var(--tic-raio);
   background: var(--tic-superficie);
   color: var(--tic-critico-texto);
@@ -159,7 +159,7 @@
 
   &.cheio {
     background: var(--tic-critico-texto);
-    color: #fff;
+    color: var(--tic-sobre-marinho);
     border: 0;
   }
 }

@@ -12,20 +12,20 @@
 .linha { width: 100%; min-width: 900px; display: grid; grid-template-columns: minmax(0, 1.6fr) 120px minmax(0, 1fr) 90px 190px 120px; gap: 12px; align-items: center;
   padding: 12px 18px; border: 0; border-top: 1px solid var(--tic-superficie-suave); background: var(--tic-superficie); font: 400 14px var(--tic-fonte);
   color: var(--tic-texto); text-align: left; cursor: pointer;
-  &:hover { background: #f8fafc; }
+  &:hover { background: var(--tic-hover); }
   &.sel { background: var(--tic-leve-fundo); }
   &.inativo { color: var(--tic-texto-secundario); }
   &.titulo { cursor: default; background: var(--tic-fundo); border-top: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--tic-texto-secundario); } }
 .pessoa { display: flex; flex-direction: column; gap: 2px; min-width: 0; b { font-weight: 600; } small { font-size: 13px; color: var(--tic-texto-secundario); } }
 .senha { font-size: 13px; color: var(--tic-texto-secundario); &.pendente { color: var(--tic-medio-texto); } }
 .quando { font-size: 13px; color: var(--tic-texto-secundario); }
-.g-cabeca { padding: 24px 28px 16px; border-bottom: 1px solid #e6ebf2; display: flex; justify-content: space-between; gap: 12px;
+.g-cabeca { padding: 24px 28px 16px; border-bottom: 1px solid var(--tic-linha-suave); display: flex; justify-content: space-between; gap: 12px;
   h2 { margin: 0; font-size: 20px; color: var(--tic-marinho); }
   .g-email { display: block; font-size: 14px; color: var(--tic-texto-secundario); margin: 2px 0 8px; } }
 .fechar { width: 40px; height: 40px; border: 1px solid var(--tic-borda); border-radius: var(--tic-raio); background: var(--tic-superficie); font-size: 18px; color: var(--tic-marinho); cursor: pointer; }
-.abas { display: flex; gap: 4px; padding: 0 28px; border-bottom: 1px solid #e6ebf2;
+.abas { display: flex; gap: 4px; padding: 0 28px; border-bottom: 1px solid var(--tic-linha-suave);
   button { height: 44px; padding: 0 14px; border: 0; background: none; font: 600 14px var(--tic-fonte); color: var(--tic-texto-secundario); cursor: pointer;
-    &.on { color: var(--tic-marinho); box-shadow: inset 0 -3px 0 var(--tic-ouro); } } }
+    &.on { color: var(--tic-marinho); box-shadow: inset 0 -3px 0 var(--tic-amarelo); } } }
 .g-msg { margin: 16px 28px 0; }
 .g-corpo { padding: 22px 28px; display: flex; flex-direction: column; gap: 16px; }
 .g-op { margin: 0; font-size: 14px; color: var(--tic-texto-secundario); }
