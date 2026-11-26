@@ -284,3 +284,38 @@ BEGIN
   UPDATE bruto.ingestao_lote SET linhas = linhas + v_gravados WHERE id = p_lote;
   RETURN jsonb_build_object('gravados', v_gravados, 'repetidos', v_repetidos, 'desconhecidos', v_desconhecidos, 'fora_do_periodo', v_fora);
 END $$;
+
+-- R6a: carga da frota a partir da Autotrac (decisão do Marcus em 26/11/2026, sem planilha da TIC).
+-- Cadastra as placas que estão no saneamento como "placa sem cadastro" (placa válida, que não se repete e sem anotação)
+-- e liga o código da API de onde vieram. Entram como cavalo, origem autotrac, sem operação (a TIC ajusta no Admin).
+-- Os itens do saneamento atendidos são marcados como resolvidos. Auditado. Idempotente: rodar de novo não duplica.
+CREATE OR REPLACE FUNCTION cadastro.job_autotrac_cadastrar_frota(p_usuario uuid DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+#variable_conflict use_column
+DECLARE s record; v uuid; v_criados integer := 0; v_ja integer := 0;
+BEGIN
+  FOR s IN
+    SELECT id, dados->>'placa' AS placa, dados->>'codigo' AS codigo
+    FROM controle.saneamento
+    WHERE fonte = 'autotrac' AND motivo = 'placa_sem_cadastro' AND estado = 'aberto'
+      AND dados->>'placa' ~ '^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$' AND dados->>'codigo' IS NOT NULL
+    ORDER BY dados->>'placa'
+  LOOP
+    SELECT id INTO v FROM cadastro.veiculo WHERE placa = s.placa;
+    IF v IS NULL THEN
+      INSERT INTO cadastro.veiculo (placa, tipo, origem, id_autotrac)
+      SELECT s.placa, 'cavalo', 'autotrac', s.codigo
+      WHERE NOT EXISTS (SELECT 1 FROM cadastro.veiculo WHERE id_autotrac = s.codigo)
+      RETURNING id INTO v;
+      IF v IS NULL THEN CONTINUE; END IF;  -- código já usado por outro veículo: fica no saneamento
+      v_criados := v_criados + 1;
+      INSERT INTO controle.auditoria (usuario_id, acao, entidade, entidade_id, antes, depois)
+      VALUES (p_usuario, 'veiculo.criar', 'cadastro.veiculo', v::text, NULL,
+              jsonb_build_object('placa', s.placa, 'id_autotrac', s.codigo, 'origem', 'autotrac', 'motivo', 'carga da frota a partir da Autotrac'));
+    ELSE
+      v_ja := v_ja + 1;
+    END IF;
+    UPDATE controle.saneamento SET estado = 'resolvido', resolvido_por = p_usuario, resolvido_em = now() WHERE id = s.id;
+  END LOOP;
+  RETURN jsonb_build_object('criados', v_criados, 'ja_existiam', v_ja);
+END $$;

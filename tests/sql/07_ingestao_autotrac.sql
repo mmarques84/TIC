@@ -119,6 +119,18 @@ BEGIN
   ASSERT (SELECT NOT senha_mudou AND ultimo_sucesso IS NOT NULL FROM controle.credencial_status WHERE fonte = 'autotrac'), 'sucesso libera';
 END $$;
 
+-- R6a: carga da frota a partir do saneamento (placa limpa sem cadastro → veículo com o código ligado).
+DO $$ DECLARE r jsonb; BEGIN
+  r := cadastro.job_autotrac_cadastrar_frota(NULL);
+  ASSERT (r->>'criados')::int = 1, 'cadastrou TST9Z99: ' || r;
+  ASSERT (SELECT id_autotrac = '900004' AND origem = 'autotrac' AND tipo = 'cavalo' FROM cadastro.veiculo WHERE placa = 'TST9Z99'), 'veículo criado e ligado';
+  ASSERT (SELECT estado FROM controle.saneamento WHERE motivo = 'placa_sem_cadastro' AND chave = 'TST9Z99') = 'resolvido', 'saneamento resolvido';
+  ASSERT EXISTS (SELECT 1 FROM controle.auditoria WHERE acao = 'veiculo.criar' AND depois->>'placa' = 'TST9Z99'), 'auditado';
+  ASSERT EXISTS (SELECT 1 FROM controle.saneamento WHERE motivo = 'placa_duplicada' AND estado = 'aberto'), 'duplicada continua aberta';
+  r := cadastro.job_autotrac_cadastrar_frota(NULL);
+  ASSERT (r->>'criados')::int = 0, 'idempotente';
+END $$;
+
 DO $$ BEGIN
   ASSERT has_function_privilege('tic_n8n', 'bruto.job_autotrac_eventos(uuid,uuid,text,jsonb)', 'EXECUTE'), 'n8n grava eventos';
   ASSERT has_function_privilege('tic_n8n', 'cadastro.job_autotrac_veiculos(uuid,jsonb,text)', 'EXECUTE'), 'n8n grava frota';
