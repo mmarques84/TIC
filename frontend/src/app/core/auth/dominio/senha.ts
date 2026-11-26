@@ -1,6 +1,6 @@
 // Regras de senha mostradas na tela de definição (o servidor valida de novo).
 
-export const SENHA_MIN = 12;
+export const SENHA_MIN = 8;
 
 const COMUNS = ['123456789012', 'senhasenha12', 'tictransportes', 'qwertyuiop12', 'abcdefghijkl'];
 

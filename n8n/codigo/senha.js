@@ -29,7 +29,7 @@ const SENHAS_COMUNS = new Set([
 
 /** Código de recusa (spec seguranca-acesso R4) ou null se a senha serve. */
 function recusaSenha(senha, nome, email) {
-  if (typeof senha !== 'string' || senha.length < 12) return 'SENHA_FRACA';
+  if (typeof senha !== 'string' || senha.length < 8) return 'SENHA_FRACA'; // R4: mínimo 8 (era 12; pedido do Marcus em 26/11/2026)
   const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const s = norm(senha);
   const pedacos = [norm(String(email).split('@')[0]), ...norm(nome).split(/\s+/)].filter((p) => p.length >= 3);

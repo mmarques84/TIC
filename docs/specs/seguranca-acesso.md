@@ -14,7 +14,7 @@ A equipe da TIC entra no portal com e-mail e senha. Cada pessoa tem um perfil (d
 - **R1.** Login por e-mail (comparado em minúsculas, sem espaços) e senha. Não há cadastro aberto: só o admin cria usuários.
 - **R2.** A senha nunca é guardada nem trafega para o banco em claro: o n8n calcula PBKDF2-SHA512 (210 mil iterações, sal de 16 bytes) e o banco guarda só o hash.
 - **R3.** Senha errada, e-mail inexistente, usuário inativo ou bloqueado recebem a **mesma** resposta ("E-mail ou senha incorretos", HTTP 401) e o mesmo tempo de resposta (o n8n confere um hash fictício quando o e-mail não existe).
-- **R4.** Política de senha nova: no mínimo 12 caracteres, não pode ser comum nem conter o e-mail ou o nome.
+- **R4.** Política de senha nova: no mínimo 8 caracteres (era 12; reduzido a pedido do Marcus em 26/11/2026), não pode ser comum nem conter o e-mail ou o nome.
 - **R5.** Depois de `acesso.tentativas_max` (5) erros seguidos, o usuário fica bloqueado por `acesso.bloqueio` (15 min). Login certo zera o contador.
 - **R6.** A sessão é um token aleatório de 32 bytes num cookie `HttpOnly`, `SameSite=Lax`, `Secure` em produção (`__Host-tic`; em desenvolvimento `tic-dev`). O banco guarda só o SHA-256 do token.
 - **R7.** Toda rota que muda algo (POST, PATCH, DELETE) exige o cabeçalho `X-XSRF-TOKEN` igual ao cookie `XSRF-TOKEN` da sessão (o banco compara os hashes). Sem isso: 403 `CSRF`.
