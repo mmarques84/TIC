@@ -406,6 +406,90 @@ apiDeTela(WF.apiJornada, 'api-jornada', 'n8n/codigo/jornada/rotas.js', ({ rota, 
     params: `[${A('Tratativa')}.usuarioId, ${B('Tratativa', 'motorista', 36)}, ${B('Tratativa', 'jornada', 36)}, ${B('Tratativa', 'tipo', 30)}, ${B('Tratativa', 'observacao', 1000)}, ${A('Tratativa')}.ip]` }, 600);
 });
 
+// ---------------- ingestão da Autotrac (spec ingestao-autotrac) ----------------
+// Credencial "Autotrac (API)": Custom Auth com os cabeçalhos Authorization (Basic em texto puro) e Ocp-Apim-Subscription-Key.
+// Criada por scripts/n8n-credencial-autotrac.sh; nunca aparece no JSON do workflow.
+const AUTOTRAC = { httpCustomAuth: { id: 'TicAutotracApi01', name: 'Autotrac (API)' } };
+
+const agendar = (no, nome, minutos) =>
+  no(nome, 'n8n-nodes-base.scheduleTrigger', 1.2, [0, 0], { rule: { interval: [{ field: 'minutes', minutesInterval: minutos }] } });
+
+// GET paginado (100 por página, até IsLastPage). Erro HTTP não derruba o ciclo: vira item com "error" (R20).
+const buscarAutotrac = (no, nome, pos) =>
+  no(nome, 'n8n-nodes-base.httpRequest', 4.2, pos, {
+    url: '={{ $json.url }}',
+    authentication: 'genericCredentialType',
+    genericAuthType: 'httpCustomAuth',
+    sendHeaders: true,
+    headerParameters: { parameters: [{ name: 'Accept', value: 'application/json' }] },
+    options: {
+      timeout: 30000,
+      pagination: { pagination: {
+        paginationMode: 'updateAParameterInEachRequest',
+        parameters: { parameters: [{ type: 'qs', name: '_offset', value: '={{ $pageCount * 100 }}' }] },
+        paginationCompleteWhen: 'other',
+        // Termina na última página ou quando a página vem incompleta (o sandbox ignora _offset e repete a mesma página).
+        completeExpression: '={{ $response.body.IsLastPage !== false || ($response.body.Data || []).length < 100 }}',
+        limitPagesFetched: true, maxRequests: 50, requestInterval: 200,
+      } },
+    },
+  }, { credentials: AUTOTRAC, onError: 'continueRegularOutput', retryOnFail: true, maxTries: 2, waitBetweenTries: 3000 });
+
+// Postgres que roda uma vez por item (sem executeOnce).
+const sqlPorItem = (no, nome, pos, query, params) =>
+  no(nome, 'n8n-nodes-base.postgres', 2.6, pos,
+    { operation: 'executeQuery', query, options: { queryReplacement: `={{ ${params} }}` } },
+    { credentials: PG, onError: 'continueRegularOutput' });
+
+{
+  const { w, no, liga } = novoWorkflow('TicIngAutotracEv', 'ing-autotrac-telemetria');
+  const c = blocos('n8n/codigo/ingestao/autotrac.js');
+  agendar(no, 'A cada 5 min', 5);
+  sql(no, 'Abrir lote', [220, 0], 'SELECT bruto.job_lote_abrir($1) AS r', "['autotrac_evento']");
+  code(no, 'Chamadas', [440, 0], c['Chamadas']);
+  buscarAutotrac(no, 'Buscar na Autotrac', [660, 0]);
+  code(no, 'Agrupar', [880, 0], c['Agrupar']);
+  sqlPorItem(no, 'Gravar eventos', [1100, 0], 'SELECT bruto.job_autotrac_eventos($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
+    '[$json.lote, $json.veiculo, $json.tipo, $json.itensJson]');
+  code(no, 'Resumo do ciclo', [1320, 0], c['Resumo do ciclo']);
+  sql(no, 'Fechar lote', [1540, 0],
+    "SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) AS f, controle.job_credencial('autotrac', $3::boolean, NULLIF($4, '')::int, NULLIF($5, '')) AS c",
+    "[$json.lote, $json.falhasJson, $json.ok, $json.http, $json.erro]");
+  liga('A cada 5 min', ['Abrir lote']);
+  no('Executar agora', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, 200], { inputSource: 'passthrough' });
+  liga('Executar agora', ['Abrir lote']);
+  liga('Abrir lote', ['Chamadas']);
+  liga('Chamadas', ['Buscar na Autotrac']);
+  liga('Buscar na Autotrac', ['Agrupar']);
+  liga('Agrupar', ['Gravar eventos']);
+  liga('Gravar eventos', ['Resumo do ciclo']);
+  liga('Resumo do ciclo', ['Fechar lote']);
+  salvar('ing-autotrac-telemetria.json', w);
+}
+
+{
+  const { w, no, liga } = novoWorkflow('TicIngAutotracCa', 'ing-autotrac-cadastro');
+  const c = blocos('n8n/codigo/ingestao/autotrac.js');
+  agendar(no, 'A cada 60 min', 60);
+  sql(no, 'Abrir lote', [220, 0], 'SELECT bruto.job_lote_abrir($1) AS r', "['autotrac_cadastro']");
+  code(no, 'Preparar frota', [440, 0], c['Preparar frota']);
+  buscarAutotrac(no, 'Buscar frota', [660, 0]);
+  code(no, 'Juntar frota', [880, 0], c['Juntar frota']);
+  sql(no, 'Gravar frota', [1100, 0], 'SELECT cadastro.job_autotrac_veiculos($1::uuid, $2::jsonb) AS r', '[$json.lote, $json.itensJson]');
+  sql(no, 'Fechar lote', [1320, 0],
+    "SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) AS f, controle.job_credencial('autotrac', $3::boolean, NULLIF($4, '')::int, NULLIF($5, '')) AS c",
+    "[$('Juntar frota').first().json.lote, $('Juntar frota').first().json.falhasJson, $('Juntar frota').first().json.ok, $('Juntar frota').first().json.http, $('Juntar frota').first().json.erro]");
+  liga('A cada 60 min', ['Abrir lote']);
+  no('Executar agora', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, 200], { inputSource: 'passthrough' });
+  liga('Executar agora', ['Abrir lote']);
+  liga('Abrir lote', ['Preparar frota']);
+  liga('Preparar frota', ['Buscar frota']);
+  liga('Buscar frota', ['Juntar frota']);
+  liga('Juntar frota', ['Gravar frota']);
+  liga('Gravar frota', ['Fechar lote']);
+  salvar('ing-autotrac-cadastro.json', w);
+}
+
 writeFileSync(arqIds, JSON.stringify(ids, null, 2) + '\n');
 
 function salvar(arquivo, w) {

@@ -8,7 +8,7 @@ set -eu
 export MSYS_NO_PATHCONV=1 # Git Bash no Windows: não converter /tmp em caminho do Windows
 cd "$(dirname "$0")/.."
 
-lista="${*:-sub-autorizar api-auth api-admin api-central api-jornada}"
+lista="${*:-sub-autorizar api-auth api-admin api-central api-jornada ing-autotrac-cadastro ing-autotrac-telemetria}"
 for nome in $lista; do
   arq="n8n/workflows/$nome.json"
   [ -f "$arq" ] || { echo "não existe: $arq"; exit 1; }

@@ -52,6 +52,13 @@ Usuários do Postgres:
 8. **Backup:** cron diário `pg_dump -Fc` + export dos workflows, cifrado, copiado para fora da VPS; snapshot semanal da Hostinger; **uma restauração testada** antes de entrar dado real.
 9. **Firewall da TIC:** passar o IP da VPS ao Flávio para liberar o servidor Moovsec.
 
+## Ingestão da Autotrac (spec ingestao-autotrac)
+
+- **VPS:** `AUTOTRAC_USUARIO`, `AUTOTRAC_SENHA` e `AUTOTRAC_CHAVE` no `.env` → `sh scripts/n8n-credencial-autotrac.sh` → `sh scripts/publicar-n8n.sh` (publica e ativa `ing-autotrac-cadastro`, de hora em hora, e `ing-autotrac-telemetria`, a cada 5 min). Os parâmetros `autotrac.url_telemetria` e `autotrac.conta_telemetria` já vêm com a produção.
+- **Computador do dev (sandbox, dados fictícios):** `sh scripts/n8n-credencial-autotrac.sh --sandbox` e, no banco local, `autotrac.url_telemetria` = `https://wapi.autotrac-online.com.br/sandboxtelemetryapi` e `autotrac.conta_telemetria` = `3253`; ligar um veículo fictício ao código `262763`. Nunca usar a credencial real no computador do dev.
+- **Forçar uma busca:** `docker compose exec -e N8N_RUNNERS_BROKER_PORT=5699 -e N8N_PORT=5690 n8n n8n execute --id=TicIngAutotracEv` (ou `TicIngAutotracCa`).
+- **Conferir:** `bruto.ingestao_lote` (estado de cada ciclo), `controle.credencial_status` (último sucesso/erro), `controle.saneamento` (o que não casou com o cadastro).
+
 ## Nunca
 
 - `docker compose down -v` · expor 5432 ou 5678 na internet · commitar `.env` · copiar `material-cliente/` para a VPS sem necessidade.

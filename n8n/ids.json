@@ -222,5 +222,22 @@
   "cond:central:Tratativa": "fe7892df-074d-4bf0-97ba-d99dcfff72bb",
   "TicApiJornada001:Tratativa autorizado?": "662e5fb1-1d3a-4b75-86f3-fa2d07d6dc8b",
   "TicApiJornada001:Tratativa banco": "ef0e5ebb-ac86-4bb6-bf2e-6990e45a24e4",
-  "TicApiJornada001:Tratativa resposta": "79797eb4-f712-4316-8a20-14d74aeb069e"
+  "TicApiJornada001:Tratativa resposta": "79797eb4-f712-4316-8a20-14d74aeb069e",
+  "TicIngAutotracEv:A cada 5 min": "44c1f32c-e9a4-4666-b309-e033eb97e779",
+  "TicIngAutotracEv:Abrir lote": "48cfd625-3d32-4031-abb4-9613726ec5a1",
+  "TicIngAutotracEv:Chamadas": "01d67688-2c43-4f0b-94df-dd7d1b634dc0",
+  "TicIngAutotracEv:Buscar na Autotrac": "89334ecc-79b1-4292-824c-90f4679e4500",
+  "TicIngAutotracEv:Agrupar": "862489be-f50f-41a8-8759-8c977e62a0be",
+  "TicIngAutotracEv:Gravar eventos": "ad0f0752-604d-4529-b08b-90ff73c8ad3d",
+  "TicIngAutotracEv:Resumo do ciclo": "5b642162-5183-42ac-98e9-ddd72c273464",
+  "TicIngAutotracEv:Fechar lote": "91869e0d-730d-4c74-95a8-b5962cba1875",
+  "TicIngAutotracCa:A cada 60 min": "82c4551b-5703-4a6a-bd0d-71af171ccb6c",
+  "TicIngAutotracCa:Abrir lote": "6bb5df88-c5e6-4526-a7e4-18f6962c734c",
+  "TicIngAutotracCa:Preparar frota": "e4341417-e5e2-4311-aee3-d01cd6ee5f95",
+  "TicIngAutotracCa:Buscar frota": "3a3ecdde-b5c2-4941-be46-d6557f9535fd",
+  "TicIngAutotracCa:Juntar frota": "11a7f601-9bc7-4965-9647-7b4bad7d4e22",
+  "TicIngAutotracCa:Gravar frota": "2ccd57c0-8e17-4083-b976-08a2b856248a",
+  "TicIngAutotracCa:Fechar lote": "a5a2f03d-67fd-4edd-9de4-1a683205b2dc",
+  "TicIngAutotracEv:Executar agora": "cf614c25-0b3f-43e6-a341-cc67b3491da1",
+  "TicIngAutotracCa:Executar agora": "7498994e-7b96-4b0d-94e5-818aa14896a0"
 }
