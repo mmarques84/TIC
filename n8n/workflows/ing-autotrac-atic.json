@@ -3,8 +3,8 @@
   "name": "ing-autotrac-atic",
   "nodes": [
     {
-      "id": "acb7e866-add1-47ad-8e85-98fe758b66cb",
-      "name": "A cada 5 min",
+      "id": "08b3c49d-4612-4e55-89ee-144aa1d9d104",
+      "name": "A cada 15 min",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -16,7 +16,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": 5
+              "minutesInterval": 15
             }
           ]
         }
@@ -97,6 +97,12 @@
         },
         "options": {
           "timeout": 30000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1500
+            }
+          },
           "pagination": {
             "pagination": {
               "paginationMode": "updateAParameterInEachRequest",
@@ -206,7 +212,7 @@
     }
   ],
   "connections": {
-    "A cada 5 min": {
+    "A cada 15 min": {
       "main": [
         [
           {

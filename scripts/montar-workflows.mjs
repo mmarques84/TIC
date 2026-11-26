@@ -424,6 +424,8 @@ const buscarAutotrac = (no, nome, pos) =>
     headerParameters: { parameters: [{ name: 'Accept', value: 'application/json' }] },
     options: {
       timeout: 30000,
+      // A Autotrac limita as chamadas (HTTP 429 "Rate limit is exceeded", visto na VPS em 26/11/2026): uma de cada vez, com intervalo.
+      batching: { batch: { batchSize: 1, batchInterval: 1500 } },
       pagination: { pagination: {
         paginationMode: 'updateAParameterInEachRequest',
         parameters: { parameters: [{ type: 'qs', name: '_offset', value: '={{ $pageCount * 100 }}' }] },
@@ -469,11 +471,11 @@ const fecharSql = (cred) => `SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) A
 const FECHAR = fecharSql('autotrac');
 
 // Telemetria: eventos de condução e de câmera (R9–R15).
-ingestaoPorVeiculo({ id: 'TicIngAutotracEv', nome: 'ing-autotrac-telemetria', fonte: 'autotrac_evento', minutos: 5, noChamadas: 'Chamadas',
+ingestaoPorVeiculo({ id: 'TicIngAutotracEv', nome: 'ing-autotrac-telemetria', fonte: 'autotrac_evento', minutos: 15, noChamadas: 'Chamadas',
   gravar: 'SELECT bruto.job_autotrac_eventos($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
   fechar: FECHAR + ', $6::text AS lote' });
 // ATIC (fase B): login, posições e macros; no fim liga macros ao motorista e recalcula a jornada (R16–R19).
-ingestaoPorVeiculo({ id: 'TicIngAutotracAt', nome: 'ing-autotrac-atic', fonte: 'autotrac_atic', minutos: 5, noChamadas: 'Chamadas ATIC',
+ingestaoPorVeiculo({ id: 'TicIngAutotracAt', nome: 'ing-autotrac-atic', fonte: 'autotrac_atic', minutos: 15, noChamadas: 'Chamadas ATIC',
   gravar: 'SELECT bruto.job_autotrac_atic($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
   fechar: fecharSql('autotrac_atic') + ', derivado.job_autotrac_atic_fim($6::uuid) AS j' });
 

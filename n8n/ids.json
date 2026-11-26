@@ -257,5 +257,7 @@
   "TicIngAutotracAc:Buscar frota": "0bf2a3ca-9687-4ec1-b4b2-c5289e28e813",
   "TicIngAutotracAc:Juntar frota": "8f708222-90e0-4384-afb5-968b8133a0ce",
   "TicIngAutotracAc:Gravar frota": "61fd0e85-b3bd-44b8-b993-6d2448e39b6e",
-  "TicIngAutotracAc:Fechar lote": "f0e0f4c6-dd87-4d50-af3b-7fd020c2aab6"
+  "TicIngAutotracAc:Fechar lote": "f0e0f4c6-dd87-4d50-af3b-7fd020c2aab6",
+  "TicIngAutotracEv:A cada 15 min": "a179b492-7c2f-4e05-9d6e-91953abad87f",
+  "TicIngAutotracAt:A cada 15 min": "08b3c49d-4612-4e55-89ee-144aa1d9d104"
 }

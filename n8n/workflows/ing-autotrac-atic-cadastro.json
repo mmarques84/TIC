@@ -97,6 +97,12 @@
         },
         "options": {
           "timeout": 30000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1500
+            }
+          },
           "pagination": {
             "pagination": {
               "paginationMode": "updateAParameterInEachRequest",

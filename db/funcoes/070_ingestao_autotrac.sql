@@ -80,6 +80,9 @@ BEGIN
   END IF;
 
   INSERT INTO bruto.ingestao_lote (fonte, inicio) VALUES (p_fonte, p_agora) RETURNING id INTO v_lote;
+  -- Ciclo anterior que morreu sem fechar (ex.: n8n parou no meio): não fica "rodando" para sempre.
+  UPDATE bruto.ingestao_lote SET fim = p_agora, estado = 'erro', erro = left(concat_ws(' · ', erro, 'Ciclo interrompido: não fechou'), 1000)
+  WHERE fonte = p_fonte AND estado = 'rodando' AND id <> v_lote AND inicio < p_agora - interval '45 minutes';
 
   IF p_fonte IN ('autotrac_evento', 'autotrac_atic') THEN
     FOR r IN
