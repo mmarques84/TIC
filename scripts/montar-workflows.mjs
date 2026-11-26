@@ -464,7 +464,9 @@ function ingestaoPorVeiculo({ id, nome, fonte, minutos, noChamadas, gravar, fech
   liga('Resumo do ciclo', ['Fechar lote']);
   salvar(`${nome}.json`, w);
 }
-const FECHAR = "SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) AS f, controle.job_credencial('autotrac', $3::boolean, NULLIF($4, '')::int, NULLIF($5, '')) AS c";
+// R3: status da credencial por API ('autotrac' = Telemetria, 'autotrac_atic' = ATIC).
+const fecharSql = (cred) => `SELECT bruto.job_lote_fechar($1::uuid, $2::jsonb) AS f, controle.job_credencial('${cred}', $3::boolean, NULLIF($4, '')::int, NULLIF($5, '')) AS c`;
+const FECHAR = fecharSql('autotrac');
 
 // Telemetria: eventos de condução e de câmera (R9–R15).
 ingestaoPorVeiculo({ id: 'TicIngAutotracEv', nome: 'ing-autotrac-telemetria', fonte: 'autotrac_evento', minutos: 5, noChamadas: 'Chamadas',
@@ -473,7 +475,7 @@ ingestaoPorVeiculo({ id: 'TicIngAutotracEv', nome: 'ing-autotrac-telemetria', fo
 // ATIC (fase B): login, posições e macros; no fim liga macros ao motorista e recalcula a jornada (R16–R19).
 ingestaoPorVeiculo({ id: 'TicIngAutotracAt', nome: 'ing-autotrac-atic', fonte: 'autotrac_atic', minutos: 5, noChamadas: 'Chamadas ATIC',
   gravar: 'SELECT bruto.job_autotrac_atic($1::uuid, $2::uuid, $3, $4::jsonb) AS r',
-  fechar: FECHAR + ', derivado.job_autotrac_atic_fim($6::uuid) AS j' });
+  fechar: fecharSql('autotrac_atic') + ', derivado.job_autotrac_atic_fim($6::uuid) AS j' });
 
 // Frota de hora em hora (R4–R8), uma por API (cada API tem o seu código de veículo).
 function ingestaoFrota({ id, nome, fonte, api }) {
@@ -486,7 +488,7 @@ function ingestaoFrota({ id, nome, fonte, api }) {
   buscarAutotrac(no, 'Buscar frota', [660, 0]);
   code(no, 'Juntar frota', [880, 0], c['Juntar frota']);
   sql(no, 'Gravar frota', [1100, 0], 'SELECT cadastro.job_autotrac_veiculos($1::uuid, $2::jsonb, $3) AS r', `[$json.lote, $json.itensJson, '${api}']`);
-  sql(no, 'Fechar lote', [1320, 0], FECHAR,
+  sql(no, 'Fechar lote', [1320, 0], fecharSql(api === 'atic' ? 'autotrac_atic' : 'autotrac'),
     "[$('Juntar frota').first().json.lote, $('Juntar frota').first().json.falhasJson, $('Juntar frota').first().json.ok, $('Juntar frota').first().json.http, $('Juntar frota').first().json.erro]");
   liga('A cada 60 min', ['Abrir lote']);
   liga('Executar agora', ['Abrir lote']);

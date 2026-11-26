@@ -74,6 +74,15 @@ BEGIN
   PERFORM bruto.job_lote_fechar(l);
 END $$;
 
+-- R3: status por API. 401 da ATIC (chave só da Telemetria, visto em 26/11) bloqueia só a ATIC.
+DO $$ DECLARE r jsonb; BEGIN
+  r := controle.job_credencial('autotrac_atic', false, 401, 'HTTP 401 na ATIC');
+  ASSERT (r->>'interromper')::boolean, 'ATIC interrompe';
+  ASSERT ((bruto.job_lote_abrir('autotrac_atic'))->>'bloqueado')::boolean, 'ATIC bloqueada';
+  ASSERT NOT ((bruto.job_lote_abrir('autotrac_evento'))->>'bloqueado')::boolean, 'Telemetria segue';
+  ASSERT NOT ((bruto.job_lote_abrir('autotrac_cadastro'))->>'bloqueado')::boolean, 'frota da Telemetria segue';
+END $$;
+
 DO $$ BEGIN
   ASSERT has_function_privilege('tic_n8n', 'bruto.job_autotrac_atic(uuid,uuid,text,jsonb)', 'EXECUTE'), 'n8n grava ATIC';
   ASSERT has_function_privilege('tic_n8n', 'derivado.job_autotrac_atic_fim(uuid)', 'EXECUTE'), 'n8n fecha ATIC';

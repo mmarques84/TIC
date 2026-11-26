@@ -30,7 +30,7 @@ for (const item of $input.all()) {
   const j = item.json || {};
   if (j.error) {
     const e = j.error;
-    const m = String(e.httpCode || e.status || (String(e.message || '').match(/\b([45]\d\d)\b/) || [])[1] || 0);
+    const m = String(e.httpCode || e.statusCode || e.status || (String(e.message || '').match(/\b([45]\d\d)\b/) || [])[1] || 0);
     g.http = Number(m) || 500; // erro sem código HTTP (rede, tempo, paginação) também é falha
   } else {
     g.itens.push(...(Array.isArray(j.Data) ? j.Data : Array.isArray(j) ? j : []));
@@ -66,7 +66,7 @@ for (const item of $input.all()) {
   const j = item.json || {};
   if (j.error) {
     const e = j.error;
-    http = Number(e.httpCode || e.status || (String(e.message || '').match(/\b([45]\d\d)\b/) || [])[1] || 0) || 500;
+    http = Number(e.httpCode || e.statusCode || e.status || (String(e.message || '').match(/\b([45]\d\d)\b/) || [])[1] || 0) || 500;
   } else itens.push(...(Array.isArray(j.Data) ? j.Data : []));
 }
 // Com erro não aplica lista parcial (placa repetida só se vê com a frota inteira).

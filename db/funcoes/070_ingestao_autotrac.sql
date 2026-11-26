@@ -73,7 +73,8 @@ DECLARE
   -- ATIC (fase B): posições, macros e logins, pelo código da ATIC; a "última" é a última posição recebida.
   v_atic boolean := p_fonte IN ('autotrac_atic', 'autotrac_atic_cadastro');
 BEGIN
-  SELECT senha_mudou INTO v_senha FROM controle.credencial_status WHERE fonte = 'autotrac';
+  -- R3: cada API tem o seu status (a chave de uma pode não valer para a outra).
+  SELECT senha_mudou INTO v_senha FROM controle.credencial_status WHERE fonte = CASE WHEN v_atic THEN 'autotrac_atic' ELSE 'autotrac' END;
   IF coalesce(v_senha, false) THEN
     RETURN jsonb_build_object('lote', NULL, 'bloqueado', true, 'motivo', 'Credencial da Autotrac recusada (401/403): corrigir antes de buscar');
   END IF;
