@@ -2,9 +2,16 @@
   <header class="cabeca">
     <h1>{{ titulo() }}</h1>
     <p>
-      @if (atualizado()) { Atualizado às {{ atualizado() }} · atualiza a cada 5 s }
+      @if (atualizado() && !ficticio) { Atualizado às {{ atualizado() }} · atualiza a cada 5 s }
     </p>
   </header>
+
+  @if (ficticio) {
+    <div class="tic-aviso exemplo" role="note">
+      <b>Dados de exemplo.</b> Esta tela ainda não está ligada ao banco: os números, placas e motoristas abaixo são fictícios (protótipo).
+      Os dados reais da Autotrac já estão sendo gravados e vão aparecer aqui quando o resumo for ligado.
+    </div>
+  }
 
   @if (store.carregando()) {
     <p class="estado" role="status">Carregando o resumo…</p>

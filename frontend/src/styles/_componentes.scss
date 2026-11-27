@@ -92,6 +92,13 @@
     color: var(--tic-texto-secundario);
     font-size: 13px;
   }
+
+  // Tela ainda com dados de exemplo: amarelo da TIC com texto marinho (nunca parecer dado real).
+  &.exemplo {
+    display: block;
+    background: var(--tic-amarelo);
+    color: var(--tic-marinho);
+  }
 }
 
 // Fundo escuro atrás de diálogo.
