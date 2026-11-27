@@ -13,7 +13,7 @@ export abstract class AuthApi {
   abstract logout(): Observable<void>;
   abstract esqueci(email: string): Observable<void>;
   abstract definirSenha(token: string, senha: string): Observable<Usuario>;
-  abstract consultarLink(token: string): Observable<{ email: string; perfil: Perfil; expiraEm: string }>;
+  abstract consultarLink(token: string): Observable<{ email: string; nome?: string; perfil: Perfil; expiraEm: string }>;
 }
 
 @Injectable()
@@ -100,7 +100,7 @@ export class AuthApiFicticia extends AuthApi {
   }
   consultarLink(token: string) {
     if (!token) return throwError(() => new ErroRegra('LINK_INVALIDO', 400));
-    return of({ email: 'frotaopi@exemplo.com', perfil: 'frota_opi' as Perfil, expiraEm: new Date(Date.now() + 864e5).toISOString() }).pipe(delay(200));
+    return of({ email: 'frotaopi@exemplo.com', nome: 'Frota Exemplo', perfil: 'frota_opi' as Perfil, expiraEm: new Date(Date.now() + 864e5).toISOString() }).pipe(delay(200));
   }
   definirSenha() {
     gravar('frota_opi');

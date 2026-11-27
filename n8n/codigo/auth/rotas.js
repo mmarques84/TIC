@@ -65,7 +65,7 @@ return [{ json: { tokenHash: token ? sha256(token) : '' } }];
 // @no Link resposta
 const row = linha($input.all());
 if (row.valido !== true) return resposta(400, { codigo: 'LINK_INVALIDO' });
-return resposta(200, { email: row.email, perfil: row.perfil, expiraEm: row.expira_em });
+return resposta(200, { email: row.email, nome: row.nome, perfil: row.perfil, expiraEm: row.expira_em });
 
 // @no Definir preparar
 const req = lerRequisicao($input.first().json, 'POST');

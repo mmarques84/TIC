@@ -29,5 +29,9 @@ describe('domínio de acesso', () => {
     expect(checarSenha('rafael-123456', 'rafael-123456', 'rafael@b.com').naoComum).toBe(false);
     expect(checarSenha('frota-segura-2026', 'outra', 'n@b.com').iguais).toBe(false);
     expect(checarSenha('frota-segura-2026', 'frota-segura-2026', 'n@b.com').valida).toBe(true);
+    // nome entra na regra, como no servidor (caso real: "Administrador TIC" com senha tic@2027)
+    expect(checarSenha('tic@2027', 'tic@2027', 'admin@tic.com.br', 'Administrador TIC').naoComum).toBe(false);
+    expect(checarSenha('tic@2027', 'tic@2027', 'admin@tic.com.br', 'Administrador').valida).toBe(true);
+    expect(checarSenha('joao#2027x', 'joao#2027x', 'j@b.com', 'João Silva').naoComum).toBe(false);
   });
 });

@@ -39,7 +39,7 @@ import { mensagemDeErro } from '../../dominio/mensagens';
           </div>
           <ul id="regras" class="regras" aria-live="polite">
             <li [class.ok]="checagem().tamanho">{{ checagem().tamanho ? '✓' : '○' }} Pelo menos {{ min }} caracteres</li>
-            <li [class.ok]="checagem().naoComum">{{ checagem().naoComum ? '✓' : '○' }} Não é uma senha comum nem contém seu e-mail</li>
+            <li [class.ok]="checagem().naoComum">{{ checagem().naoComum ? '✓' : '○' }} Não é uma senha comum nem contém seu nome ou e-mail</li>
             <li [class.ok]="checagem().iguais">{{ checagem().iguais ? '✓' : '○' }} As duas senhas são iguais</li>
           </ul>
           <div class="tic-campo">
@@ -65,18 +65,20 @@ export class DefinirSenha implements OnInit {
   readonly carregando = signal(true);
   readonly linkInvalido = signal('');
   readonly email = signal('');
+  readonly nome = signal('');
   readonly perfil = signal('');
   readonly expira = signal('');
   readonly senha = signal('');
   readonly confirmacao = signal('');
   readonly enviando = signal(false);
   readonly erro = signal('');
-  readonly checagem = computed(() => checarSenha(this.senha(), this.confirmacao(), this.email()));
+  readonly checagem = computed(() => checarSenha(this.senha(), this.confirmacao(), this.email(), this.nome()));
 
   async ngOnInit(): Promise<void> {
     try {
       const l = await firstValueFrom(this.api.consultarLink(this.token()));
       this.email.set(l.email);
+      this.nome.set(l.nome ?? '');
       this.perfil.set(NOME_PERFIL[l.perfil as Perfil] ?? l.perfil);
       this.expira.set(new Date(l.expiraEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
     } catch (e) {
