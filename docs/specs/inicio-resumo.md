@@ -52,7 +52,7 @@ Tira os números de exemplo do Início e mostra o retrato real do momento, lido 
 - [x] **V4 (R10, R12).** Autotrac com sucesso há 5 min = ok; há 2 h = atraso; `senha_mudou` = erro; Moovsec nunca configurado = inativa.
 - [x] **V5 (R11).** Ordem: crítico antes de grave; dentro do nível, o mais antigo primeiro; no máximo 5.
 - [x] **V6 (R14).** Banco vazio: a tela abre sem erro, sem nenhum número de exemplo.
-- [ ] **V7 (manual).** Na VPS, a Autotrac aparece "ok · último dado há X min · N eventos hoje".
+- [x] **V7 (manual).** Na VPS, a Autotrac aparece "ok · último dado há X min · N eventos hoje".
 
 ## Fora do escopo
 
@@ -63,4 +63,4 @@ Gráficos do Cockpit gerencial · clicar no indicador e abrir filtrado (já leva
 - [ ] Para a diretoria, "falsos positivos evitados" deve contar o dia ou o mês? (André)
 - [ ] "N cadastrados" em *Motoristas em jornada*: todos os motoristas ativos ou só os com controle de jornada? (Rafael) — até lá, só os com controle.
 
-Conferido em 26/11/2026: V1–V6 em `tests/sql/09_inicio.sql` (9/9 conjuntos ok); rota `GET /api/inicio` local com sessão de teste. V7 na VPS após publicar. As fontes aparecem como Autotrac · Telemetria, Autotrac · ATIC, Moovsec, IA (Claude) e Datapar.
+Conferido em 26/11/2026: V1–V6 em `tests/sql/09_inicio.sql` (9/9 conjuntos ok); rota `GET /api/inicio` local com sessão de teste. V7 na VPS (26/11 21:12): Autotrac · Telemetria "ok · último dado há 7 min · 34126 eventos hoje"; demais cartões 0 ou "—" com o motivo. As fontes aparecem como Autotrac · Telemetria, Autotrac · ATIC, Moovsec, IA (Claude) e Datapar.
