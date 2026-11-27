@@ -274,5 +274,15 @@
   "TicIngAutotracAc:Juntar autorizados": "6c9b3fd1-0fd2-402f-8699-36976b677060",
   "TicIngAutotracAc:Gravar autorizados": "474a9409-668b-4c78-a678-69eaaf4e71b4",
   "TicIngAutotracEv:A cada 30 min": "d6304a2e-35eb-48f1-8233-d75efe3ee9e7",
-  "TicIngAutotracAt:A cada 30 min": "4946c55e-78db-4f55-b8a5-4adc0d244dcd"
+  "TicIngAutotracAt:A cada 30 min": "4946c55e-78db-4f55-b8a5-4adc0d244dcd",
+  "TicApiInicio0001:Responder": "54204645-727c-49f4-85b8-ad3439863b6d",
+  "TicApiInicio0001:Erro seguro": "ec6c338d-d301-4831-bedc-5fc7b3e3f58f",
+  "TicApiInicio0001:Negar": "53fa6715-d6a4-4804-9f72-ee84c2519db9",
+  "webhook:inicio:GET": "87ee8788-586c-43c7-abe9-c809bc17bc23",
+  "TicApiInicio0001:GET inicio": "aa7e298c-e66e-44f1-8887-e66b5d80af07",
+  "TicApiInicio0001:Resumo entrada": "856b161a-fca9-487b-849a-321589b89032",
+  "TicApiInicio0001:Resumo autorizar": "d4bdb06d-bf95-4598-a81c-467804814a47",
+  "TicApiInicio0001:Resumo autorizado?": "8b79f915-b9f4-448a-b504-2da3eae83b69",
+  "TicApiInicio0001:Resumo banco": "621cb7bd-3b13-46c0-8428-3a048ae4b427",
+  "TicApiInicio0001:Resumo resposta": "08afc6c1-8523-4b99-a928-9364b53495f0"
 }

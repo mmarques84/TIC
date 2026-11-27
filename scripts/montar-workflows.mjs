@@ -406,6 +406,13 @@ apiDeTela(WF.apiJornada, 'api-jornada', 'n8n/codigo/jornada/rotas.js', ({ rota, 
     params: `[${A('Tratativa')}.usuarioId, ${B('Tratativa', 'motorista', 36)}, ${B('Tratativa', 'jornada', 36)}, ${B('Tratativa', 'tipo', 30)}, ${B('Tratativa', 'observacao', 1000)}, ${A('Tratativa')}.ip]` }, 600);
 });
 
+// ---------------- api-inicio (spec inicio-resumo) ----------------
+// Sem permissão específica (só sessão): o sp_inicio_resumo filtra cada bloco pela permissão da tela de origem.
+apiDeTela('TicApiInicio0001', 'api-inicio', 'n8n/codigo/inicio/rotas.js', ({ rota, A }) => {
+  rota({ webhook: 'GET inicio', metodo: 'GET', caminho: 'inicio', base: 'Resumo', permissao: '', resposta: 'Resumo resposta',
+    query: 'SELECT * FROM controle.sp_inicio_resumo($1::uuid)', params: `[${A('Resumo')}.usuarioId]` }, 0);
+});
+
 // ---------------- ingestão da Autotrac (spec ingestao-autotrac) ----------------
 // Credencial "Autotrac (API)": Custom Auth com os cabeçalhos Authorization (Basic em texto puro) e Ocp-Apim-Subscription-Key.
 // Criada por scripts/n8n-credencial-autotrac.sh; nunca aparece no JSON do workflow.

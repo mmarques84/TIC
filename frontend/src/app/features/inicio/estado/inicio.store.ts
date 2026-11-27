@@ -6,7 +6,7 @@ import { Sessao } from '../../../core/auth/sessao';
 import { InicioApi } from '../dados/inicio-api';
 import { LinhaSimples, ResumoInicio, TITULO_PAINEL, composicaoDoPerfil, indicadoresDoPerfil } from '../dominio/inicio';
 
-const INTERVALO_MS = 5000; // "tempo real" = consulta a cada 5 s
+const INTERVALO_MS = 30000; // spec inicio-resumo R15: a cada 30 s (o resumo junta várias tabelas)
 
 // Estado da tela Início. O componente só lê signals daqui; nunca chama HTTP.
 @Injectable()
