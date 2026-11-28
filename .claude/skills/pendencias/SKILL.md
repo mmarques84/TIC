@@ -33,6 +33,14 @@ Ao retomar: leia `CLAUDE.md`, `docs/plano.md`, `docs/estudo-paineis.md` e esta l
 - [ ] Teto mensal de consumo de IA (André, 27/11)
 - [ ] Parametrização de desvios e limites operacionais (pasta Midas/TIC Transportes/Artefatos do cliente)
 
+- [ ] Autotrac: chave da API ATIC (posições, macros, login: Jornada e Torre); significado dos eventos 26–49; Dicionário_Alerta_Expandido; como enviar mensagem/sirene (Marco 1)
+- [ ] Tabela de macros da TIC (número → significado) para o controle.macro_mapa
+- [ ] Planilha de motoristas (de-para dos 167 códigos da Autotrac) e decisão sobre guardar CPF (LGPD)
+- [ ] Moovsec: URL do servidor da TIC e usuário de integração
+- [ ] Rafael: conferir km de 2–3 caminhões com relatório do Supervisor; quem vê Condução e onde no menu
+- [ ] TI da TIC: redirecionar www.tic.com.br/paineldigital (WordPress) e mandar o logo
+- [ ] TIC: trocar a senha e a chave da Autotrac (passaram por WhatsApp/chat) e guardar os segredos do /opt/tic/.env no cofre
+
 ## Aguardando o Michael
 
 - [ ] Perguntas do `docs/plano.md` §1 (Datapar × torre, limites por operação, tratativas, pgvector, itens da OPI, e-mail de violações, operações)
@@ -40,6 +48,9 @@ Ao retomar: leia `CLAUDE.md`, `docs/plano.md`, `docs/estudo-paineis.md` e esta l
 - [ ] Proposta de horas adicionais do Rodopar/Datapar
 
 ## Diário
+
+- **28/11/2026 (Condução, segunda entrega):** ranking por motorista/caminhão, linha aberta e planilha (, rotas ranking/detalhe/exportar). Na VPS: 193 motoristas, 172 caminhões, 2,2 s. Km pela diferença entre leituras do hodômetro (a Autotrac real manda só a leitura atual). Trabalho de 27/11 (Cockpit e consulta de eventos) estava sem commit: commitado em 705fe6f; /opt/tic tinha 22 arquivos de root (corrigido com chown para tic). **Falta:** conferir km com o Supervisor (Rafael); conferência visual logado.
+- **26/11/2026 (VPS no ar):** https://paineldigital.tic.com.br (VPS Hostinger srv2168185, usuário tic, /opt/tic, backup diário 03:15 UTC). Ingestão Autotrac Telemetria ligada (30 min, 186 de 188 veículos autorizados, ~30 mil eventos/dia); ATIC desligada (a chave atual não vale para ela). Frota carregada da Autotrac (188 placas limpas). Início com dados reais. Admins: admin@mxmidas.com e admin@tic.com.br. Senha mínima 8.
 
 - **27/11/2026 (Telemetria, rankings completos):** publicados os rankings pesquisáveis de motoristas e veículos no Cockpit e os links para Condução com o recorte aplicado. API local autenticada validou as contagens por placa e motorista. Na VPS, as duas listas reconciliaram com o total do Cockpit e as APIs bloquearam consultas anônimas. Conferência visual autenticada pendente.
 
