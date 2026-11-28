@@ -22,6 +22,6 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | cockpit-opi.md | 3b | a criar | opi |
 | consumo-ia.md | 3b | a criar | orquestrador |
 | [inicio-resumo.md](inicio-resumo.md) (Início com dados reais) | 2 | implementada (26/11) | alertas, jornada, integrações |
-| [relatorio-conducao.md](relatorio-conducao.md) (Condução por motorista) | 3b | consulta de eventos implementada (27/11); ranking e exportação em rascunho | ingestão Autotrac |
+| [relatorio-conducao.md](relatorio-conducao.md) (Condução por motorista) | 3b | implementada (27/11 consulta; 28/11 ranking, detalhe e planilha) | ingestão Autotrac |
 | [admin-usuarios.md](admin-usuarios.md) (Admin · Usuários e perfis) | 1–2 | implementada localmente (20/11) | seguranca-acesso |
 | admin.md (parâmetros, integrações, auditoria) | 2–3b | a criar | seguranca-acesso |

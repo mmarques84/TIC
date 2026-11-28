@@ -1,6 +1,6 @@
 # Spec: Relatório de condução por motorista
 
-**Status:** consulta de eventos implementada; ranking, detalhe e exportação em rascunho · **Marco:** 3b · **Atualizada em:** 2026-11-27
+**Status:** implementada (primeira entrega 27/11; segunda entrega 28/11: ranking, detalhe e exportação, layout aprovado pelo Marcus em 28/11, artboard 10) · **Marco:** 3b · **Atualizada em:** 2026-11-28
 **Primeira entrega:** tela Condução, workflow `api-conducao` e função `sp_conducao_eventos`. A consulta lê `bruto.autotrac_evento`, `cadastro.motorista`, `cadastro.veiculo` e o estado da ingestão.
 
 ## O que faz
@@ -63,12 +63,12 @@ Em 27/11, a tela foi publicada na VPS. O build Angular passou localmente e na VP
 
 ## Como verificar
 
-- [ ] **V1 (R1, R2).** Central e TI: 403. Operação A não vê caminhão da operação B.
-- [ ] **V2 (R5, R9).** Com eventos fictícios, as contagens por tipo batem com contagem direta; temporizado, ignição e desconhecido não entram.
-- [ ] **V3 (R6, R7).** Minutos de marcha lenta = soma das durações; eventos por 100 km correto; sem km = "—".
-- [ ] **V4 (R5).** Motorista sem cadastro aparece com nome e código da Autotrac e a marca "não cadastrado".
-- [ ] **V5 (R8).** Ordem padrão por eventos/100 km.
-- [ ] **V6 (R13).** Exportar gera CSV com as mesmas linhas e grava a auditoria.
+- [x] **V1 (R1, R2).** Central e TI: 403. Operação A não vê caminhão da operação B.
+- [x] **V2 (R5, R9).** Com eventos fictícios, as contagens por tipo batem com contagem direta; temporizado, ignição e desconhecido não entram.
+- [x] **V3 (R6, R7).** Minutos de marcha lenta = soma das durações; eventos por 100 km correto; sem km = "—".
+- [x] **V4 (R5).** Motorista sem cadastro aparece com nome e código da Autotrac e a marca "não cadastrado".
+- [x] **V5 (R8).** Ordem padrão por eventos/100 km.
+- [x] **V6 (R13).** Exportar gera CSV com as mesmas linhas e grava a auditoria.
 - [ ] **V7 (manual).** Na VPS, com os dados reais: os 167 motoristas da Autotrac aparecem; a tela abre em menos de 3 s para 30 dias.
 
 ## Fora do escopo
@@ -82,3 +82,5 @@ Nota ou "score" do motorista (fórmula de pontuação é decisão da TIC, ver Em
 - [ ] **Pontuação:** a TIC quer uma nota por motorista (ex.: pesos por tipo de evento)? Se sim, os pesos são dela. Até lá, só contagens e por 100 km. (Rafael / Natanael)
 - [ ] **Significado exato dos campos da Autotrac:** `VelocityMax` em velocidade excessiva (a média real veio 24, estranho para excesso) e a duração dos eventos. Conferir com a Autotrac antes de mostrar velocidade no relatório.
 - [ ] **De-para de motoristas:** os 167 códigos da Autotrac precisam virar motoristas do cadastro (por planilha do RH ou carga a partir da Autotrac, como foi com os veículos). Até lá o relatório funciona com o nome da Autotrac (R5).
+
+Segunda entrega conferida em 28/11/2026 (local): V1–V6 em `tests/sql/10_conducao_ranking.sql` (10/10 conjuntos ok) e `dominio/conducao.spec.ts` (texto "× a média" e planilha); rotas `conducao/ranking`, `conducao/detalhe` e `conducao/exportar` com sessão de teste (200; visão inválida 400; exportação auditada). Decisões de implementação: taxa por 100 km só com 50 km ou mais no período (senão "—"); km pelo hodômetro dos eventos "temporizado"; "× a média" a partir de 1,15 e "abaixo da média" até 0,85; o "Ver os 50 últimos" do layout é a lista de Eventos da primeira entrega, filtrada pela linha.

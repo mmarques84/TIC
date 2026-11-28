@@ -420,6 +420,25 @@ apiDeTela('TicApiConducao01', 'api-conducao', 'n8n/codigo/conducao/rotas.js', ({
     query: "SELECT * FROM derivado.sp_conducao_eventos($1::uuid, $2, $3, $4, $5, $6, NULLIF($7, '')::uuid)",
     params: `[${A('Eventos')}.usuarioId, ${Q('Eventos', 'periodo', 12)}, ${Q('Eventos', 'placa', 9)}, ${Q('Eventos', 'tipo', 41)}, ${Q('Eventos', 'cursor', 160)}, ${Q('Eventos', 'motorista', 100)}, ${Q('Eventos', 'operacao', 37)}]`,
   }, 0);
+  // Segunda entrega (spec relatorio-conducao R5–R13): ranking, detalhe da linha e exportação.
+  rota({
+    webhook: 'GET conducao/ranking', metodo: 'GET', caminho: 'conducao/ranking', base: 'Ranking',
+    permissao: 'conducao.ver', resposta: 'Ranking resposta',
+    query: 'SELECT * FROM derivado.sp_conducao_ranking($1::uuid, $2, $3, $4, $5)',
+    params: `[${A('Ranking')}.usuarioId, ${Q('Ranking', 'periodo', 12)}, ${Q('Ranking', 'visao', 12)}, ${Q('Ranking', 'tipo', 41)}, ${Q('Ranking', 'q', 60)}]`,
+  }, 200);
+  rota({
+    webhook: 'GET conducao/detalhe', metodo: 'GET', caminho: 'conducao/detalhe', base: 'Detalhe',
+    permissao: 'conducao.ver', resposta: 'Detalhe resposta',
+    query: 'SELECT * FROM derivado.sp_conducao_detalhe($1::uuid, $2, $3, $4)',
+    params: `[${A('Detalhe')}.usuarioId, ${Q('Detalhe', 'periodo', 12)}, ${Q('Detalhe', 'visao', 12)}, ${Q('Detalhe', 'chave', 100)}]`,
+  }, 400);
+  rota({
+    webhook: 'GET conducao/exportar', metodo: 'GET', caminho: 'conducao/exportar', base: 'Exportar',
+    permissao: 'conducao.ver', resposta: 'Ranking resposta',
+    query: "SELECT * FROM derivado.sp_conducao_exportar($1::uuid, $2, $3, $4, $5, NULLIF($6, '')::inet)",
+    params: `[${A('Exportar')}.usuarioId, ${Q('Exportar', 'periodo', 12)}, ${Q('Exportar', 'visao', 12)}, ${Q('Exportar', 'tipo', 41)}, ${Q('Exportar', 'q', 60)}, ${A('Exportar')}.ip]`,
+  }, 600);
 });
 
 apiDeTela('TicApiCockpit001', 'api-cockpit', 'n8n/codigo/cockpit/rotas.js', ({ rota, A, Q }) => {

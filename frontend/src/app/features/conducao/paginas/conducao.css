@@ -1,18 +1,62 @@
-h1, h2 { color: var(--tic-marinho); margin-top: 0; }
-h2 { margin-bottom: 0; font-size: 1.25rem; }
-.filtros, .eventos { padding: 16px; margin-bottom: 16px; }
-.filtros, .cabecalho, .paginacao { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-.filtros { align-items: end; }
-label { display: grid; gap: 4px; flex: 1 1 160px; min-width: 0; }
-input, select, button { min-height: 44px; border: 1px solid var(--tic-borda-campo); border-radius: 6px; padding: 0 10px; font: inherit; color: var(--tic-marinho); background: var(--tic-superficie, white); }
-button { cursor: pointer; }
+:host { display: flex; flex-direction: column; gap: 12px; }
+h1, h2 { color: var(--tic-marinho); margin: 0; }
+h1 { font-size: 24px; }
+h2 { font-size: 1.25rem; }
+.cabeca { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.titulo { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.titulo span, .recorte, .coleta { font-size: 13px; color: var(--tic-texto-secundario); margin: 0; }
+.baixar { height: 40px; font-size: 14px; }
+.barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--tic-texto-secundario); }
+.pilulas, .alternar { display: flex; gap: 4px; }
+.alternar { gap: 0; border: 1px solid var(--tic-borda); border-radius: var(--tic-raio-p); overflow: hidden; }
+.pilulas button, .alternar button { height: 34px; padding: 0 12px; border: 1px solid var(--tic-borda); border-radius: var(--tic-raio-p); background: var(--tic-superficie); color: var(--tic-texto); font: 600 13px var(--tic-fonte); cursor: pointer; }
+.alternar button { border: 0; border-radius: 0; }
+.pilulas button.on { background: var(--tic-amarelo); border-color: var(--tic-amarelo); color: var(--tic-marinho); font-weight: 700; }
+.alternar button.on { background: var(--tic-marinho); color: var(--tic-sobre-marinho); }
+select, input { height: 34px; border: 1px solid var(--tic-borda-campo); border-radius: var(--tic-raio-p); padding: 0 8px; font: 400 14px var(--tic-fonte); background: var(--tic-superficie); color: var(--tic-texto); }
+input[type='search'] { margin-left: auto; width: min(240px, 100%); }
+.cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.cartao { display: flex; flex-direction: column; gap: 2px; background: var(--tic-superficie); border: 1px solid var(--tic-borda); border-radius: var(--tic-raio); padding: 12px 14px; }
+.cartao span { font-size: 12px; font-weight: 600; color: var(--tic-texto-secundario); }
+.cartao b { font-size: 24px; color: var(--tic-marinho); }
+.cartao small { font-size: 12px; color: var(--tic-texto-secundario); }
+.cartao.destaque { background: var(--tic-medio-fundo); }
+.cartao.destaque span, .cartao.destaque b, .cartao.destaque small { color: var(--tic-medio-texto); }
+.ranking { overflow-x: auto; }
+.estado { margin: 0; padding: 14px 16px; color: var(--tic-texto-secundario); }
+.linha { width: 100%; min-width: 1080px; display: grid; grid-template-columns: 220px 90px 70px 130px 90px 60px 110px 110px minmax(0, 1fr) 54px; gap: 10px; align-items: center; padding: 10px 16px; border: 0; background: var(--tic-superficie); font: 400 14px var(--tic-fonte); color: var(--tic-texto); text-align: left; cursor: pointer; box-sizing: border-box; }
+.linha:hover { background: var(--tic-hover); }
+.linha.aberta { background: var(--tic-leve-fundo); }
+.linha.cab { cursor: default; background: var(--tic-fundo); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--tic-texto-secundario); }
+.bloco { border-top: 1px solid var(--tic-superficie-suave); }
+.nome, .taxa, .duas { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nome b { font-weight: 600; }
+.nome small, .duas small, .taxa small { font-size: 12px; color: var(--tic-texto-secundario); }
+.taxa b { font-weight: 700; }
+.taxa.alto b, .taxa.alto small { color: var(--tic-critico-texto); }
+.sec { font-size: 13px; color: var(--tic-texto-secundario); }
+.seta { font-size: 12px; font-weight: 600; color: var(--tic-azul); }
+.detalhe { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; padding: 12px 16px 16px; background: var(--tic-hover); border-top: 1px solid var(--tic-superficie-suave); font-size: 13px; min-width: 1080px; box-sizing: border-box; }
+.col { display: flex; flex-direction: column; gap: 6px; }
+h3 { margin: 4px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--tic-texto-secundario); }
+.grafico { display: flex; align-items: flex-end; gap: 8px; min-height: 110px; }
+.coluna { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 64px; }
+.coluna span { width: 100%; background: var(--tic-azul); border-radius: 4px 4px 0 0; }
+.coluna small { font-size: 11px; color: var(--tic-texto-secundario); }
+.coluna .valor { color: var(--tic-texto); font-weight: 600; }
+.ln { display: block; }
+.link { align-self: flex-start; border: 0; background: none; padding: 0; color: var(--tic-azul); font: 600 13px var(--tic-fonte); cursor: pointer; text-decoration: underline; }
+.eventos { padding: 16px; }
+.cabecalho, .filtro-placa, .paginacao { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.filtro-placa input { width: 200px; }
+.filtro-placa button, .paginacao button, .estado button { min-height: 36px; border: 1px solid var(--tic-borda-campo); border-radius: var(--tic-raio-p); padding: 0 12px; font: 600 13px var(--tic-fonte); color: var(--tic-marinho); background: var(--tic-superficie); cursor: pointer; }
+.filtro-placa button[type='submit'] { background: var(--tic-amarelo); border-color: var(--tic-amarelo); }
 button:disabled { opacity: .5; cursor: default; }
-button[type=submit] { background: var(--tic-amarelo); font-weight: 700; }
-.cabecalho span { color: var(--tic-texto-secundario); }
 table { width: 100%; border-collapse: collapse; margin-top: 12px; }
 th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--tic-borda); }
 .paginacao { margin-top: 16px; }
 @media (max-width: 680px) {
+  input[type='search'] { margin-left: 0; width: 100%; }
   thead { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
   table, tbody, tr, td { display: block; }
   tr { border-bottom: 1px solid var(--tic-borda); padding: 8px 0; }

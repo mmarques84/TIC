@@ -1,6 +1,12 @@
 // @no Eventos resposta
 return resposta(200, linha($input.all()).resultado);
 
+// @no Ranking resposta
+return resposta(200, linha($input.all()).ranking || {});
+
+// @no Detalhe resposta
+return resposta(200, linha($input.all()).detalhe || {});
+
 // @no Negar
 const a = $input.first().json;
 return resposta(a.http, { codigo: a.codigo }, a.http === 401 ? cookiesApagar({ https: a.https }) : []);

@@ -1,42 +1,126 @@
-<h1>Condução</h1>
-@if (motorista || operacao) {
-  <p>Eventos filtrados pelo recorte do Cockpit. <a routerLink="/cockpit">Voltar ao Cockpit</a></p>
-}
-<form class="tic-cartao filtros" (ngSubmit)="filtrar()" ngNativeValidate>
-  <label>Período
-    <select name="periodo" [(ngModel)]="filtros.periodo">
-      <option value="7">Últimos 7 dias</option><option value="hoje">Hoje</option>
-      <option value="mes">Mês atual</option><option value="anterior">Mês anterior</option>
-    </select>
-  </label>
-  <label>Placa
-    <input name="placa" [(ngModel)]="filtros.placa" maxlength="8" pattern="[A-Za-z0-9\-]{1,8}" placeholder="Ex.: ABC1D23">
-  </label>
-  <label>Tipo de evento
-    <select name="tipo" [(ngModel)]="filtros.tipo">
-      <option value="">Todos</option>
-      @for (opcao of opcoes; track opcao[0]) { <option [value]="opcao[0]">{{ opcao[1] }}</option> }
-    </select>
-  </label>
-  <button type="submit" [disabled]="store.carregando()">Filtrar</button>
-</form>
+<header class="cabeca">
+  <div class="titulo">
+    <h1>Condução dos motoristas</h1>
+    <span>Dados até {{ horaDe(ranking.dados()?.dadosAte ?? null) }} · Autotrac Telemetria</span>
+  </div>
+  <button type="button" class="tic-botao baixar" (click)="ranking.exportar()" [disabled]="ranking.exportando() || !ranking.dados()?.linhas?.length">
+    {{ ranking.exportando() ? 'Gerando…' : 'Baixar planilha' }}
+  </button>
+</header>
 
-<section class="tic-cartao eventos" aria-label="Eventos de condução" [attr.aria-busy]="store.carregando()">
+@if (motorista || operacao) {
+  <p class="recorte">Eventos filtrados pelo recorte do Cockpit. <a routerLink="/cockpit">Voltar ao Cockpit</a></p>
+}
+
+<div class="barra">
+  <span>Período:</span>
+  <span class="pilulas" role="group" aria-label="Período">
+    @for (p of periodos; track p.valor) {
+      <button type="button" [class.on]="filtros.periodo === p.valor" [attr.aria-pressed]="filtros.periodo === p.valor" (click)="periodo(p.valor)">{{ p.nome }}</button>
+    }
+  </span>
+  <span>Ver:</span>
+  <span class="alternar" role="group" aria-label="Visão">
+    <button type="button" [class.on]="ranking.filtros().visao === 'motorista'" [attr.aria-pressed]="ranking.filtros().visao === 'motorista'" (click)="visao('motorista')">Por motorista</button>
+    <button type="button" [class.on]="ranking.filtros().visao === 'caminhao'" [attr.aria-pressed]="ranking.filtros().visao === 'caminhao'" (click)="visao('caminhao')">Por caminhão</button>
+  </span>
+  <label for="tipo-c">Tipo:</label>
+  <select id="tipo-c" [ngModel]="filtros.tipo" (ngModelChange)="tipo($event)">
+    <option value="">Todos de condução</option>
+    @for (opcao of opcoes; track opcao[0]) { <option [value]="opcao[0]">{{ opcao[1] }}</option> }
+  </select>
+  <label class="sr-only" for="busca-c">Buscar</label>
+  <input id="busca-c" type="search" placeholder="Motorista ou placa" (change)="buscar($any($event.target).value)">
+</div>
+
+@if (ranking.dados(); as r) {
+  @switch (r.estado) {
+    @case ('atraso') { <p class="tic-aviso info" role="status">A coleta da Autotrac está atrasada: os números podem estar incompletos.</p> }
+    @case ('erro') { <p class="tic-aviso erro" role="status">A coleta da Autotrac apresentou erro.</p> }
+    @case ('inativa') { <p class="tic-aviso info" role="status">A coleta da Autotrac ainda não está ativa.</p> }
+  }
+  <div class="cartoes">
+    <div class="cartao"><span>Eventos de condução</span><b>{{ fmt(r.resumo.eventos) }}</b><small>sem temporizado, ignição e desconhecidos</small></div>
+    <div class="cartao"><span>Km rodados</span><b>{{ fmt(r.resumo.km) }}</b><small>pelo hodômetro da Autotrac</small></div>
+    <div class="cartao"><span>Média da frota</span><b>{{ fmt(r.resumo.media) }} /100 km</b><small>eventos de condução a cada 100 km</small></div>
+    <div class="cartao destaque"><span>Acima de 2× a média</span><b>{{ r.resumo.acimaDe2x }} {{ r.visao === 'motorista' ? 'motorista(s)' : 'caminhão(ões)' }}</b><small>candidatos a orientação ou OPI</small></div>
+  </div>
+}
+
+<section class="tic-cartao ranking" aria-label="Ranking" [attr.aria-busy]="ranking.carregando()">
+  <div class="linha cab" aria-hidden="true">
+    <span>{{ ranking.filtros().visao === 'motorista' ? 'Motorista' : 'Caminhão' }}</span>
+    <span>{{ ranking.filtros().visao === 'motorista' ? 'Caminhões' : 'Motoristas' }}</span>
+    <span>Km</span><span>Eventos /100 km ▾</span><span>Velocidade</span><span>RPM</span>
+    <span>Fora faixa verde</span><span>Marcha lenta</span><span>{{ ranking.filtros().visao === 'motorista' ? 'Banguela · bruscas' : 'Banguela · bruscas · óleo' }}</span><span></span>
+  </div>
+  @if (ranking.carregando()) {
+    <p class="estado" role="status">Carregando o ranking…</p>
+  } @else if (ranking.erro()) {
+    <p class="estado" role="alert">{{ ranking.erro() }} <button type="button" (click)="ranking.carregar()">Tentar novamente</button></p>
+  } @else if (ranking.dados(); as r) {
+    @for (l of r.linhas; track l.chave) {
+      <div class="bloco">
+        <button type="button" class="linha" [class.aberta]="ranking.aberta() === l.chave" [attr.aria-expanded]="ranking.aberta() === l.chave" (click)="ranking.abrir(l.chave)">
+          <span class="nome"><b>{{ l.nome }}</b><small>{{ l.sub }}</small></span>
+          <span class="sec">{{ l.outros }}</span>
+          <span>{{ fmt(l.km) }}</span>
+          <span class="taxa" [class.alto]="acimaDoDobro(l)"><b>{{ fmt(l.taxa) }}</b><small>{{ textoVezes(l) }}</small></span>
+          <span>{{ l.velocidade }}</span>
+          <span>{{ l.rpm }}</span>
+          <span class="duas"><span>{{ l.faixa }}</span><small>{{ l.faixaMin }} min</small></span>
+          <span class="duas"><span>{{ l.lenta }}</span><small>{{ l.lentaMin }} min</small></span>
+          <span>{{ l.banguela }} · {{ l.bruscas }}@if (r.visao === 'caminhao') { · {{ l.oleo }} }</span>
+          <span class="seta">{{ ranking.aberta() === l.chave ? 'Fechar' : 'Abrir' }}</span>
+        </button>
+        @if (ranking.aberta() === l.chave) {
+          <div class="detalhe">
+            @if (ranking.carregandoDetalhe()) {
+              <p class="estado" role="status">Abrindo…</p>
+            } @else if (ranking.detalhe(); as d) {
+              <div class="col">
+                <h3>Eventos por dia</h3>
+                <div class="grafico" role="img" [attr.aria-label]="'Eventos por dia em ' + d.dias.length + ' dia(s)'">
+                  @for (dia of d.dias; track dia.dia) {
+                    <div class="coluna"><small class="valor">{{ dia.eventos }}</small><span [style.height]="altura(dia.eventos, d.dias)"></span><small>{{ dia.dia }}</small></div>
+                  } @empty { <p class="estado">Sem eventos no período.</p> }
+                </div>
+                <span class="sec">{{ r.visao === 'motorista' ? 'Caminhões no período' : 'Motoristas no período' }}: <b>{{ d.outros.join(' · ') || '—' }}</b></span>
+              </div>
+              <div class="col">
+                <h3>Últimos eventos</h3>
+                @for (u of d.ultimos; track $index) {
+                  <span class="ln">{{ formatar(u.horario) }} · <b>{{ tipos[u.tipo] || u.tipo }}</b>@if (u.minutos) { · {{ u.minutos }} min } · {{ r.visao === 'motorista' ? u.placa : u.motorista }}</span>
+                } @empty { <p class="estado">Sem eventos.</p> }
+                <button type="button" class="link" (click)="verEventos(l)">Ver todos os eventos na lista abaixo</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @empty {
+      <p class="estado" role="status">Nenhum resultado para esse filtro.</p>
+    }
+  }
+</section>
+
+<section #listaEventos class="tic-cartao eventos" aria-label="Eventos de condução" [attr.aria-busy]="store.carregando()">
+  <div class="cabecalho">
+    <h2>Eventos</h2>
+    <form class="filtro-placa" (ngSubmit)="filtrar()" ngNativeValidate>
+      <label for="placa-c" class="sr-only">Placa</label>
+      <input id="placa-c" name="placa" [(ngModel)]="filtros.placa" maxlength="8" pattern="[A-Za-z0-9\-]{1,8}" placeholder="Placa (ex.: ABC1D23)">
+      <button type="submit" [disabled]="store.carregando()">Filtrar</button>
+      @if (motorista) { <button type="button" (click)="limparMotorista()">Limpar motorista</button> }
+    </form>
+  </div>
   @if (store.carregando()) {
     <p role="status">Carregando eventos…</p>
   } @else if (store.erro()) {
     <p role="alert">{{ store.erro() }}</p>
     <button type="button" (click)="store.carregar()">Tentar novamente</button>
   } @else if (store.dados(); as dados) {
-    <div class="cabecalho">
-      <h2>Eventos de condução</h2>
-      @if (dados.atualizadoEm; as horario) { <span>Última coleta concluída em {{ formatar(horario) }}</span> }
-    </div>
-    @switch (dados.estado) {
-      @case ('atraso') { <p role="status">A coleta da Autotrac está atrasada.</p> }
-      @case ('erro') { <p role="status">A coleta da Autotrac apresentou erro.</p> }
-      @case ('inativa') { <p role="status">A coleta da Autotrac ainda não está ativa.</p> }
-    }
+    @if (dados.atualizadoEm; as horario) { <span class="coleta">Última coleta concluída em {{ formatar(horario) }}</span> }
     @if (dados.eventos.length) {
       <table aria-label="Eventos">
         <thead><tr><th>Horário</th><th>Placa</th><th>Motorista</th><th>Tipo</th></tr></thead>
