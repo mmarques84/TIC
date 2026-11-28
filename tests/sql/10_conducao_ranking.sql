@@ -22,11 +22,11 @@ DO $$
 DECLARE v1 text := '00000000-0000-7000-8000-0000000002a1'; v2 text := '00000000-0000-7000-8000-0000000002a2';
 BEGIN
   -- motorista cadastrado (7001) no TST1C11: leituras do hodômetro 1000 → 1060 → 1100 = 100 km (como na Autotrac real: só a leitura atual)
-  PERFORM pg_temp.ev(v1, 55, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1000}');
-  PERFORM pg_temp.ev(v1, 50, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1060}');
-  PERFORM pg_temp.ev(v1, 40, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1100}');
-  -- leitura absurda (troca de equipamento) não conta
-  PERFORM pg_temp.ev(v1, 35, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 9100}');
+  PERFORM pg_temp.ev(v1, 180, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1000}');
+  PERFORM pg_temp.ev(v1, 120, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1060}');
+  PERFORM pg_temp.ev(v1, 90, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1100}');
+  -- leitura impossível em 5 min (troca de equipamento) não conta; as outras respeitam até 120 km/h
+  PERFORM pg_temp.ev(v1, 85, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 9100}');
   PERFORM pg_temp.ev(v1, 30, 'velocidade_excessiva', '7001', 'MOTORISTA CADASTRADO');
   PERFORM pg_temp.ev(v1, 29, 'rpm_excessiva', '7001', 'MOTORISTA CADASTRADO');
   PERFORM pg_temp.ev(v1, 28, 'marcha_lenta_excessiva', '7001', 'MOTORISTA CADASTRADO',
@@ -35,12 +35,12 @@ BEGIN
   PERFORM pg_temp.ev(v1, 26, 'ignicao_ligada', '7001', 'MOTORISTA CADASTRADO');
   PERFORM pg_temp.ev(v1, 25, 'desconhecido', '7001', 'MOTORISTA CADASTRADO');
   -- motorista sem cadastro (8002) no TST2C22: 100 km, 10 eventos de velocidade
-  PERFORM pg_temp.ev(v2, 65, 'temporizado', '8002', 'FULANO AUTOTRAC', '{"HodometerStart": 500}');
+  PERFORM pg_temp.ev(v2, 120, 'temporizado', '8002', 'FULANO AUTOTRAC', '{"HodometerStart": 500}');
   PERFORM pg_temp.ev(v2, 60, 'temporizado', '8002', 'FULANO AUTOTRAC', '{"HodometerStart": 600}');
   FOR i IN 1..10 LOOP PERFORM pg_temp.ev(v2, 10 + i, 'velocidade_excessiva', '8002', 'FULANO AUTOTRAC'); END LOOP;
   -- motorista com pouco km (9003): 10 km, 2 eventos → taxa "—"
-  PERFORM pg_temp.ev(v2, 6, 'temporizado', '9003', 'POUCO KM', '{"HodometerStart": 600}');
-  PERFORM pg_temp.ev(v2, 5, 'temporizado', '9003', 'POUCO KM', '{"HodometerStart": 610}');
+  PERFORM pg_temp.ev(v2, 30, 'temporizado', '9003', 'POUCO KM', '{"HodometerStart": 600}');
+  PERFORM pg_temp.ev(v2, 20, 'temporizado', '9003', 'POUCO KM', '{"HodometerStart": 610}');
   PERFORM pg_temp.ev(v2, 3, 'banguela', '9003', 'POUCO KM');
   PERFORM pg_temp.ev(v2, 2, 'freada_brusca', '9003', 'POUCO KM');
 END $$;
@@ -59,15 +59,15 @@ BEGIN
 
   -- V2, V3, V5 (R5–R9): contagens, minutos, km, por 100 km e ordem
   SELECT ranking INTO r FROM derivado.sp_conducao_ranking(adm, 'hoje', 'motorista', '', '');
-  ASSERT jsonb_array_length(r->'linhas') = 3, 'três motoristas: ' || (r->'linhas');
+  ASSERT jsonb_array_length(r->'linhas') = 3, 'três motoristas: ' || (r->'linhas')::text;
   l := r->'linhas'->0;
-  ASSERT l->>'nome' = 'FULANO AUTOTRAC' AND (l->>'taxa')::numeric = 10 AND (l->>'velocidade')::int = 10, 'primeiro: 10/100 km: ' || l;
+  ASSERT l->>'nome' = 'FULANO AUTOTRAC' AND (l->>'taxa')::numeric = 10 AND (l->>'velocidade')::int = 10, 'primeiro: 10/100 km: ' || l::text;
   ASSERT l->>'sub' = 'cód. Autotrac 8002 · não cadastrado' AND NOT (l->>'cadastrado')::boolean, 'V4: não cadastrado';
   l := r->'linhas'->1;
-  ASSERT l->>'nome' = 'Motorista Cadastrado' AND (l->>'total')::int = 3, 'cadastrado: 3 eventos (sem óleo, ignição, desconhecido): ' || l;
-  ASSERT (l->>'km')::int = 100 AND (l->>'taxa')::numeric = 3 AND (l->>'lentaMin')::int = 10, 'km, taxa e minutos: ' || l;
+  ASSERT l->>'nome' = 'Motorista Cadastrado' AND (l->>'total')::int = 3, 'cadastrado: 3 eventos (sem óleo, ignição, desconhecido): ' || l::text;
+  ASSERT (l->>'km')::int = 100 AND (l->>'taxa')::numeric = 3 AND (l->>'lentaMin')::int = 10, 'km, taxa e minutos: ' || l::text;
   ASSERT (r->'linhas'->2->>'taxa') IS NULL AND (r->'linhas'->2->>'total')::int = 2, 'pouco km = —';
-  ASSERT (r->'resumo'->>'eventos')::int = 15 AND (r->'resumo'->>'km')::int = 210, 'resumo: ' || (r->'resumo');
+  ASSERT (r->'resumo'->>'eventos')::int = 15 AND (r->'resumo'->>'km')::int = 210, 'resumo: ' || (r->'resumo')::text;
   ASSERT (r->'resumo'->>'acimaDe2x')::int = 0 OR (r->'resumo'->>'acimaDe2x')::int = 1, 'acima de 2x calculado';
 
   -- R11: por caminhão inclui pressão do óleo
@@ -82,11 +82,11 @@ BEGIN
 
   -- V1 (R2): operação CA não vê o caminhão da operação CB
   SELECT ranking INTO r FROM derivado.sp_conducao_ranking(opa, 'hoje', 'caminhao', '', '');
-  ASSERT jsonb_array_length(r->'linhas') = 1 AND r->'linhas'->0->>'nome' = 'TST1C11', 'escopo: ' || (r->'linhas');
+  ASSERT jsonb_array_length(r->'linhas') = 1 AND r->'linhas'->0->>'nome' = 'TST1C11', 'escopo: ' || (r->'linhas')::text;
 
   -- R12: detalhe do motorista cadastrado
   SELECT detalhe INTO r FROM derivado.sp_conducao_detalhe(adm, 'hoje', 'motorista', '00000000-0000-7000-8000-0000000003a1');
-  ASSERT jsonb_array_length(r->'ultimos') = 3 AND r->'outros'->>0 = 'TST1C11', 'detalhe: ' || r;
+  ASSERT jsonb_array_length(r->'ultimos') = 3 AND r->'outros'->>0 = 'TST1C11', 'detalhe: ' || r::text;
 
   -- V6 (R13): exportar audita
   PERFORM derivado.sp_conducao_exportar(adm, 'hoje', 'motorista', '', '', '10.0.0.1');

@@ -26,9 +26,11 @@ BEGIN
               THEN greatest(0, least(600, extract(epoch FROM ((e.dados->>'EventDateTimeEnd')::timestamptz - e.horario)) / 60)) END,
          -- R7: o "temporizado" real traz só a leitura atual do hodômetro (km), sem fim (visto na VPS em 28/11/2026).
          -- Km = diferença para a leitura anterior do MESMO caminhão, para quem dirigia na leitura nova.
-         -- Diferença fora de 0–200 km entre leituras (troca de equipamento, leitura ruim) não conta.
+         -- Só conta a diferença possível no tempo entre as leituras (até 120 km/h, mínimo 5 km): negativa ou maior
+         -- que isso é troca de equipamento ou leitura ruim. (Limite fixo de 200 km descartava viagens reais: VPS, 28/11.)
          CASE WHEN e.tipo = 'temporizado'
-                   AND nullif(e.dados->>'HodometerStart', '')::numeric - lag(nullif(e.dados->>'HodometerStart', '')::numeric) OVER janela BETWEEN 0 AND 200
+                   AND nullif(e.dados->>'HodometerStart', '')::numeric - lag(nullif(e.dados->>'HodometerStart', '')::numeric) OVER janela
+                       BETWEEN 0 AND greatest(5, 120 * extract(epoch FROM (e.horario - lag(e.horario) OVER janela)) / 3600)
               THEN nullif(e.dados->>'HodometerStart', '')::numeric - lag(nullif(e.dados->>'HodometerStart', '')::numeric) OVER janela END,
          e.velocidade
   FROM bruto.autotrac_evento e
