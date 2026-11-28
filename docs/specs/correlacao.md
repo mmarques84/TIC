@@ -1,32 +1,89 @@
-# Spec de Telemetria na Central de alertas
+# Spec: Correlação · eventos da Autotrac viram alertas na Central
 
-**Status:** regra de abertura e gravidade pendentes de aprovação · **Atualizada em:** 2026-11-27
+**Status:** proposta (28/11/2026) para o Marcus levar ao Michael e ao Rafael; nada é ativado sem a aprovação dos limites · **Marco:** 2–3a · **Atualizada em:** 2026-11-28
+**Telas:** nenhuma nova (os alertas aparecem na Central de alertas, spec `central-alertas.md`) · **Tabelas:** lê `bruto.autotrac_evento`, `controle.parametro`; grava `derivado.evento`, `derivado.alerta`, `controle.auditoria` · **Workflows:** a correlação roda no fim de cada ciclo do `ing-autotrac-telemetria` · **Funções:** `job_correlacao_telemetria`
+**Base:** roteiro v1 §9 (alertas da Fase 1: fadiga, velocidade, freada brusca, câmera obstruída; faixas de velocidade seca e molhada), parâmetros já cadastrados (`velocidade.seca`, `velocidade.molhada`, `freada.*`), dados reais da VPS (26–28/11).
 
 ## O que faz
 
-Liga os eventos de freada brusca da Autotrac à Central de alertas. A fila existente usa os registros de `derivado.evento` e `derivado.alerta`.
+Decide quais eventos de telemetria que a Autotrac manda (≈ 30 mil por dia) viram **alerta na Central** e com que **gravidade**. A grande maioria não vira alerta: fica para o relatório de Condução e para o Cockpit. Vira alerta só o que o roteiro manda tratar na hora (freada brusca e excesso de velocidade), com limites em parâmetros que a TIC aprova e ajusta sem mexer no código. Ocorrências repetidas do mesmo caminhão em poucos minutos viram **um** alerta, para a Central não afogar.
 
-## Regras propostas
+## Volume real (VPS, 24 h entre 26 e 27/11/2026)
 
-- **R1.** Processar somente os eventos `freada_brusca` gravados pela Telemetria. A condição para abrir o alerta e sua gravidade vêm de parâmetros aprovados pela TIC.
-- **R2.** Preservar o identificador do veículo e o horário do evento. Usar o motorista vinculado na ingestão quando disponível. O alerta pode ser tratado com motorista pendente de identificação.
-- **R3.** A mesma combinação de veículo, horário e tipo gera no máximo um evento derivado e um alerta. Reprocessar um lote preserva a tratativa existente.
-- **R4.** A ativação começa nos eventos recebidos após a habilitação da regra. Uma carga do histórico exige uma decisão específica da TIC.
-- **R5.** A fila continua aplicando as permissões e o escopo por operação da [Central](central-alertas.md).
+| Tipo recebido | Por dia | Caminhões | Observação |
+|---|---:|---:|---|
+| Pressão do óleo baixa | 1.172 | 81 | ruído alto; manutenção, não central |
+| Velocidade excessiva | 274 | 65 | só **4** com velocidade ≥ 81 km/h (campo a confirmar, ver Validação) |
+| Velocidade excessiva na chuva | 2 | 2 | |
+| Freada brusca | 1 | 1 | |
+| Aceleração brusca | 1 | 1 | |
+| Fora da faixa verde, marcha lenta, RPM, banguela | ≈ 6.000 | — | condução/economia, não central |
+
+Com a proposta abaixo, a Central receberia **algo como 5 a 10 alertas de telemetria por dia**.
+
+## Regras (proposta)
+
+**O que abre alerta**
+- **R1.** Abre alerta, por tipo, conforme `controle.parametro` `correlacao.regras` (editável por quem tem `parametro.editar`). Proposta inicial:
+
+  | Tipo | Abre alerta? | Nível (proposta) |
+  |---|---|---|
+  | `freada_brusca` | sim | **grave** |
+  | `velocidade_excessiva` | sim, se a velocidade atinge a faixa de pista seca | pelas faixas: 81–83 leve, 84–86 médio, > 86 grave |
+  | `velocidade_excessiva_chuva` | sim, se atinge a faixa de pista molhada | 60–63 leve, 64–66 médio, > 66 grave |
+  | `aceleracao_brusca` | não (vai para Condução) | — |
+  | RPM, fora da faixa verde, marcha lenta, banguela | não (Condução) | — |
+  | pressão do óleo baixa/alta | não (visão por caminhão; alerta de manutenção é outra spec) | — |
+  | eventos de câmera da Autotrac (ADAS/SDS) | não, até mapear os nomes reais | — |
+  | `desconhecido`, temporizado, ignição | nunca | — |
+
+- **R2.** A velocidade comparada com as faixas é a do campo que a Autotrac confirmar (hoje a ingestão grava `VelocityMax`, que parece não ser a velocidade do excesso: ver Validação). **Enquanto não confirmar, excesso de velocidade não abre alerta**; freada brusca abre.
+- **R3.** Só evento com o caminhão em movimento: freada a partir de `freada.velocidade_min` (10 km/h) quando o evento traz a velocidade inicial.
+
+**Juntar repetições**
+- **R4.** Mesmo caminhão + mesmo tipo dentro de `correlacao.janela_min` (proposta: 10 min) = **um** alerta. O título conta as ocorrências ("3 freadas bruscas em 10 min") e o nível sobe para o maior entre elas.
+- **R5.** A partir de `correlacao.repeticoes_para_subir` ocorrências na janela (proposta: 3), o nível sobe um degrau (leve → médio → grave → crítico).
+
+**Quem, onde, quando**
+- **R6.** O alerta guarda o veículo, o horário do primeiro evento e o motorista da ingestão (código da Autotrac; sem cadastro = "motorista não identificado"). Local: coordenadas do evento até a ATIC trazer o texto do local.
+- **R7.** Um evento bruto gera no máximo um evento derivado (chave: veículo + horário + tipo). Reprocessar não duplica nem reabre alerta já tratado (spec atual R3).
+- **R8.** Só os eventos recebidos **depois** de ligar a correlação (`correlacao.ativa` = true e `correlacao.desde`). Carregar o histórico é decisão à parte (spec atual R4).
+- **R9.** Permissões e escopo por operação são os da Central (spec atual R5).
+
+**Mais tarde (fora desta entrega)**
+- **R10.** Marco 2: quando o Moovsec estiver ligado, freada da Autotrac e alarme de câmera do mesmo caminhão a até `correlacao.camera_s` segundos (proposta: 5) viram **o mesmo** evento, com as fotos (roteiro: "freada brusca da Autotrac aparece com a imagem da câmera do mesmo instante").
+
+## Quem pode
+
+Como a Central (`central-alertas.md`). Mudar os limites da correlação exige `parametro.editar` (admin; hoje nenhum outro perfil).
+
+## Fluxo
+
+1. Fim do ciclo do `ing-autotrac-telemetria` → `job_correlacao_telemetria(lote)`.
+2. Para os eventos do lote que abrem alerta (R1–R3), cria ou soma o evento derivado e o alerta (R4–R7).
+3. A Central já mostra (fila, nível escrito, tratativa, auditoria).
 
 ## Como verificar
 
-- [ ] Evento que atende à regra aparece na fila com placa, horário e gravidade previstos.
-- [ ] Evento fora da regra permanece disponível em Condução.
-- [ ] Reprocessar o lote não duplica a ocorrência nem reabre alerta tratado.
-- [ ] Perfil sem acesso e usuário de outra operação não veem o alerta.
-- [ ] A ativação não põe eventos antigos na fila.
+- [ ] **V1 (R1).** Freada brusca abre alerta grave; RPM, faixa verde, óleo e desconhecido não abrem.
+- [ ] **V2 (R1, R2).** Com a velocidade confirmada: 82 km/h em seca = leve, 85 = médio, 90 = grave; 65 em molhada = médio. Sem confirmar (parâmetro desligado): excesso não abre.
+- [ ] **V3 (R4, R5).** 3 freadas do mesmo caminhão em 10 min = 1 alerta "3 freadas bruscas em 10 min", nível subiu um degrau; a 4ª em 30 min abre outro.
+- [ ] **V4 (R7).** Reprocessar o lote não duplica e não reabre alerta tratado.
+- [ ] **V5 (R8).** Ligar a correlação não põe eventos antigos na fila.
+- [ ] **V6 (R9).** Perfil sem `alerta.ver` e pessoa de outra operação não veem.
+- [ ] **V7 (manual).** Na VPS, em 1 dia ligado: a quantidade de alertas fica na faixa estimada (5–10/dia) e a TIC acha útil.
 
-## Em aberto
+## Fora do escopo
 
-- [ ] Confirmar com Marcus, Michael ou Rafael se cada evento `freada_brusca` da Autotrac abre alerta ou se há um critério adicional. Confirmar a gravidade.
+Fadiga e câmera (Moovsec: spec `ingestao-moovsec.md` e escalonamento de fadiga) · alerta de manutenção por pressão do óleo · mensagem e sirene automáticas (dependem da prova técnica da Autotrac) · triagem por IA dos alertas de telemetria.
 
-O roteiro V1 já registra parâmetros de redução de velocidade para caracterizar a freada. A spec de ingestão mantém em aberto a decisão de quais eventos recebidos da Autotrac devem abrir ocorrências na Central e com que gravidade.
+## Em aberto (perguntas para o Michael e o Rafael)
+
+- [ ] **Freada brusca:** todo evento de freada da Autotrac abre alerta? Nível **grave** está bom? (o roteiro define a freada — queda ≥ 15 km/h em 1 s a partir de 10 km/h —, mas não o nível)
+- [ ] **Velocidade:** qual campo da Autotrac é a velocidade do excesso? (ver Validação abaixo) Até responder, excesso não abre alerta.
+- [ ] **Repetições:** juntar em 10 min e subir o nível a partir de 3 está bom?
+- [ ] **Pressão do óleo:** 1.172 por dia em 81 caminhões parece sensor ruidoso. A manutenção quer um alerta próprio (outra spec) ou só o relatório por caminhão?
+- [ ] **Força G > 0,5** (roteiro): a Autotrac manda isso em algum evento? Não apareceu nos dados.
 
 ## Validação de velocidade em produção (27/11/2026)
 
