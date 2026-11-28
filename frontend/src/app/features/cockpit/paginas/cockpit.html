@@ -1,0 +1,156 @@
+<div class="cabecalho">
+  <h1>Cockpit gerencial da frota</h1>
+  @if (store.resumo()?.atualizadoEm; as horario) {
+    <p>Autotrac · Última coleta em {{ formatarHorario(horario) }}</p>
+  }
+</div>
+<form class="tic-cartao filtros" (ngSubmit)="filtrar()" ngNativeValidate>
+  <label>Período
+    <select name="periodo" [(ngModel)]="filtros.periodo">
+      <option value="7">Últimos 7 dias</option><option value="hoje">Hoje</option>
+      <option value="mes">Mês atual</option><option value="anterior">Mês anterior</option>
+    </select>
+  </label>
+  <label>Operação
+    <select name="operacao" [(ngModel)]="filtros.operacao">
+      <option value="">Todas</option>
+      @for (operacao of store.resumo()?.operacoes ?? []; track operacao.id) {
+        <option [value]="operacao.id">{{ operacao.nome }}</option>
+      }
+    </select>
+  </label>
+  <label>Placa
+    <input name="placa" [(ngModel)]="filtros.placa" maxlength="8" pattern="[A-Za-z0-9\-]{1,8}" placeholder="Ex.: ABC1D23">
+  </label>
+  <label>Tipo de evento
+    <select name="tipo" [(ngModel)]="filtros.tipo">
+      <option value="">Todos</option>
+      @for (opcao of opcoes; track opcao[0]) { <option [value]="opcao[0]">{{ opcao[1] }}</option> }
+    </select>
+  </label>
+  <button type="submit" [disabled]="store.carregando()">Aplicar filtros</button>
+  <button type="button" [disabled]="store.carregando()" (click)="limpar()">Limpar</button>
+</form>
+
+<div [attr.aria-busy]="store.carregando()">
+  @if (store.carregando()) {
+    <p role="status">Carregando o resumo…</p>
+  } @else if (store.erro()) {
+    <p role="alert">Não foi possível carregar o resumo.</p>
+    <button type="button" (click)="store.consultar()">Tentar novamente</button>
+  } @else if (store.resumo(); as resumo) {
+    <div class="indicadores">
+      <section class="tic-cartao indicador">
+        <h2>Eventos no período</h2>
+        <strong>{{ formatarTotal(resumo.total) }}</strong>
+        @switch (resumo.estado) {
+          @case ('atraso') { <p>Coleta atrasada</p> }
+          @case ('erro') { <p>Coleta com erro</p> }
+          @case ('inativa') { <p>Coleta inativa</p> }
+          @default { <p>Autotrac · Telemetria</p> }
+        }
+      </section>
+      @for (indicador of indicadores; track indicador.titulo) {
+        <section class="tic-cartao indicador">
+          <h2>{{ indicador.titulo }}</h2>
+          <strong aria-label="Indisponível">—</strong>
+          <p>{{ indicador.fonte }}</p>
+        </section>
+      }
+    </div>
+    @if (resumo.total) {
+      <div class="graficos">
+        <section class="tic-cartao bloco">
+          <h2>Eventos por semana</h2>
+          <div class="evolucao" role="list" aria-label="Totais semanais">
+            @for (semana of semanas(); track semana.inicio) {
+              <div class="dia" role="listitem" [attr.aria-label]="formatarDia(semana.inicio) + ': ' + formatarTotal(semana.total) + ' eventos'">
+                <div class="trilho">
+                  <div class="coluna" [style.height.%]="100 * semana.total / maxSemana()">
+                    <strong>{{ formatarTotal(semana.total) }}</strong>
+                  </div>
+                </div>
+                <span aria-hidden="true">{{ formatarDia(semana.inicio) }}</span>
+              </div>
+            }
+          </div>
+        </section>
+        <section class="tic-cartao bloco">
+          <h2>Distribuição por tipo</h2>
+          @for (tipo of resumo.tipos; track tipo.tipo) {
+            <div class="linha">
+              <span>{{ tipos[tipo.tipo] }}</span>
+              <strong>{{ formatarTotal(tipo.total) }}</strong>
+              <meter [value]="tipo.total" [max]="store.maxTipo()" [attr.aria-label]="tipos[tipo.tipo]"></meter>
+            </div>
+          }
+        </section>
+      </div>
+    } @else {
+      <p role="status">Nenhum evento encontrado para esses filtros.</p>
+    }
+    <div class="inferior">
+      <section class="tic-cartao bloco">
+        <div class="ranking-cabecalho">
+          <h2>Ranking de eventos</h2>
+          <a routerLink="/conducao" [queryParams]="store.recorte()">Ver eventos de condução</a>
+        </div>
+        <div class="ranking-controles">
+          <button type="button" [attr.aria-pressed]="visao() === 'motoristas'" (click)="trocarVisao('motoristas')">Motoristas</button>
+          <button type="button" [attr.aria-pressed]="visao() === 'veiculos'" (click)="trocarVisao('veiculos')">Veículos</button>
+          <input aria-label="Buscar no ranking" [ngModel]="busca()" (ngModelChange)="busca.set($event)"
+            [placeholder]="visao() === 'motoristas' ? 'Buscar motorista ou placa' : 'Buscar placa'">
+        </div>
+        @if (visao() === 'motoristas' && motoristasVisiveis().length) {
+          <table class="ranking">
+            <thead><tr><th scope="col">Motorista</th><th scope="col">Placas</th><th scope="col">Eventos</th></tr></thead>
+            <tbody>
+              @for (motorista of motoristasVisiveis(); track motorista.id) {
+                <tr>
+                  <td><a routerLink="/conducao" [queryParams]="{ ...store.recorte(), motorista: motorista.id }">{{ motorista.nome }}</a>
+                    @if (!motorista.cadastrado) { <small>Não cadastrado</small> }
+                  </td>
+                  <td>{{ motorista.placas.join(', ') }}</td>
+                  <td>{{ formatarTotal(motorista.total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else if (visao() === 'veiculos' && veiculosVisiveis().length) {
+          <table class="ranking">
+            <thead><tr><th scope="col">Placa</th><th scope="col">Eventos</th></tr></thead>
+            <tbody>
+              @for (veiculo of veiculosVisiveis(); track veiculo.placa) {
+                <tr>
+                  <td><a routerLink="/conducao" [queryParams]="{ ...store.recorte(), placa: veiculo.placa }">{{ veiculo.placa }}</a></td>
+                  <td>{{ formatarTotal(veiculo.total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p>Nenhum resultado para este recorte.</p>
+        }
+        @if (!busca().trim() && resumo[visao()].length > resumo.limiteDestaques) {
+          <button class="ranking-completo" type="button" (click)="completo.set(!completo())">
+            {{ completo() ? 'Mostrar destaques' : 'Ver ranking completo' }}
+          </button>
+        }
+        @if (resumo.semMotorista) {
+          <p>{{ formatarTotal(resumo.semMotorista) }} {{ resumo.semMotorista === 1 ? 'evento sem motorista identificado' : 'eventos sem motorista identificado' }}.</p>
+        }
+      </section>
+      <div>
+        <section class="tic-cartao bloco jornada">
+          <h2>Jornada</h2>
+          <p>Aguardando dados de jornada da Autotrac ATIC.</p>
+          <a routerLink="/jornada">Abrir Jornada</a>
+        </section>
+        <section class="tic-cartao bloco">
+          <h2>Consumo de IA no mês</h2>
+          <p>Aguardando dados de consumo.</p>
+        </section>
+      </div>
+    </div>
+  }
+</div>

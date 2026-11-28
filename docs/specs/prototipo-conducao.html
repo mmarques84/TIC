@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Condução · TIC</title>
+<style>
+  :root { --marinho: #1f2f58; --azul: #337ab7; --amarelo: #f5b201; --borda: #cbd7e6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f3f5f8; color: var(--marinho); font: 16px "Titillium Web", Tahoma, sans-serif; }
+  header { background: var(--marinho); color: white; padding: 18px clamp(16px, 5vw, 64px); }
+  main { max-width: 1250px; margin: 28px auto; padding: 0 16px; }
+  h1 { margin: 0 0 8px; }
+  .painel { background: white; border: 1px solid var(--borda); border-radius: 12px; padding: 16px; margin-block: 18px; }
+  form, nav { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
+  label { display: grid; gap: 6px; flex: 1 1 150px; }
+  input, select, button { min-height: 44px; border: 1px solid var(--borda); border-radius: 6px; padding: 0 10px; font: inherit; color: inherit; background: white; }
+  button { cursor: pointer; }
+  button[type=submit] { background: var(--amarelo); font-weight: bold; }
+  button[aria-pressed=true] { border-color: var(--azul); }
+  button:disabled { cursor: default; opacity: .5; }
+  .subtitulo, .controle { margin: 0; }
+  .cabecalho-eventos, .paginacao { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .cabecalho-eventos h2 { margin: 0; font-size: 20px; }
+  .paginacao { margin-top: 16px; }
+  .placa { font-weight: bold; }
+  .sem-motorista { color: #52647e; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 14px 8px; border-bottom: 1px solid var(--borda); }
+  @media (max-width: 600px) {
+    thead { position: absolute; clip-path: inset(50%); }
+    table, tbody, tr, td { display: block; }
+    tr { padding: 8px 0; border-bottom: 1px solid var(--borda); }
+    td { display: grid; grid-template-columns: 95px 1fr; border: 0; padding: 5px 0; }
+    td::before { content: attr(data-campo); font-weight: bold; }
+  }
+</style>
+<header>Painel Digital TIC / Painéis / Condução</header>
+<main>
+  <h1>Condução</h1>
+  <p class="subtitulo">Eventos da Autotrac por veículo e motorista</p>
+  <form class="painel" id="filtros">
+    <label>Período <select id="periodo"><option value="7">Últimos 7 dias</option><option value="hoje">Hoje</option><option value="mes">Mês atual</option><option value="anterior">Mês anterior</option></select></label>
+    <label>Placa <input id="placa" placeholder="Ex.: ABC1D23" autocomplete="off"></label>
+    <label>Tipo <select id="tipo"><option value="">Todos</option><option>Freada brusca</option><option>Excesso de velocidade</option><option>Marcha lenta</option></select></label>
+    <button type="submit">Filtrar</button>
+  </form>
+  <section class="painel" aria-label="Eventos">
+    <div class="cabecalho-eventos">
+      <h2>Eventos de condução</h2>
+      <small>Dados fictícios · Atualizados em 27/11 às 10h38</small>
+    </div>
+    <p id="mensagem" aria-live="polite"></p>
+    <table id="eventos">
+      <thead><tr><th>Horário</th><th>Placa</th><th>Motorista</th><th>Tipo</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <nav id="paginacao" class="paginacao" aria-label="Páginas de eventos">
+      <button id="voltar">Anterior</button>
+      <span id="pagina"></span>
+      <button id="avancar">Próxima</button>
+    </nav>
+  </section>
+  <nav aria-label="Estados do protótipo">
+    <button data-estado="dados">Dados</button>
+    <button data-estado="carregando">Carregando</button>
+    <button data-estado="vazio">Vazio</button>
+    <button data-estado="erro">Erro</button>
+    <button data-estado="restrito">Sem permissão</button>
+  </nav>
+</main>
+<script>
+  const registros = [
+    ['27/11 10:38', 'ABC1D23', 'Motorista exemplo 1', 'Freada brusca'],
+    ['27/11 10:35', 'XYZ4E56', 'Não identificado', 'Excesso de velocidade'],
+    ['26/11 17:12', 'ABC1D23', 'Motorista exemplo 2', 'Marcha lenta'],
+    ['26/11 16:05', 'XYZ4E56', 'Motorista exemplo 1', 'Freada brusca'],
+    ['25/11 08:22', 'ABC1D23', 'Motorista exemplo 2', 'Excesso de velocidade'],
+    ['12/11 14:30', 'XYZ4E56', 'Não identificado', 'Marcha lenta'],
+    ['30/10 09:21', 'XYZ4E56', 'Motorista exemplo 1', 'Freada brusca'],
+  ];
+  const mensagens = {
+    carregando: 'Carregando eventos…',
+    vazio: 'Nenhum evento encontrado para esses filtros.',
+    erro: 'Não foi possível carregar os eventos. Tente filtrar novamente.',
+    restrito: 'Seu perfil não tem acesso a Condução.',
+  };
+  const tabela = document.querySelector('#eventos');
+  const campos = ['Horário', 'Placa', 'Motorista', 'Tipo'];
+  const botoes = document.querySelectorAll('[data-estado]');
+  const porPagina = 4;
+  let pagina = 0;
+  let filtros = { placa: '', tipo: '', periodo: '7' };
+  function mostrar(estado) {
+    const { placa, tipo, periodo } = filtros;
+    const filtrados = registros.filter(([hora, veiculo, , evento]) => {
+      const [dia, mes] = hora.split(' ')[0].split('/').map(Number);
+      const noPeriodo = periodo === 'anterior' ? mes === 10 :
+        mes === 11 && (periodo === 'hoje' ? dia === 27 : periodo === '7' ? dia >= 21 : true);
+      return noPeriodo && veiculo.includes(placa) && (!tipo || evento === tipo);
+    });
+    const visivel = estado === 'dados' && filtrados.length > 0;
+    const paginas = Math.ceil(filtrados.length / porPagina);
+    tabela.hidden = !visivel;
+    document.querySelector('#paginacao').style.display = visivel ? '' : 'none';
+    document.querySelector('#pagina').textContent = `Página ${pagina + 1} de ${paginas}`;
+    document.querySelector('#voltar').disabled = pagina === 0;
+    document.querySelector('#avancar').disabled = pagina + 1 >= paginas;
+    document.querySelector('#mensagem').textContent = mensagens[estado] ||
+      (filtrados.length ? `${filtrados.length} ${filtrados.length === 1 ? 'evento encontrado' : 'eventos encontrados'}` : mensagens.vazio);
+    tabela.tBodies[0].replaceChildren();
+    for (const registro of filtrados.slice(pagina * porPagina, (pagina + 1) * porPagina)) {
+      const linha = tabela.tBodies[0].insertRow();
+      registro.forEach((valor, indice) => {
+        const celula = linha.insertCell();
+        celula.dataset.campo = campos[indice];
+        celula.textContent = valor;
+        if (indice === 1) celula.classList.add('placa');
+        if (indice === 2 && valor === 'Não identificado') celula.classList.add('sem-motorista');
+      });
+    }
+    botoes.forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.estado === estado)));
+  }
+  document.querySelector('#filtros').addEventListener('submit', evento => {
+    evento.preventDefault();
+    filtros = {
+      placa: document.querySelector('#placa').value.trim().toUpperCase(),
+      tipo: document.querySelector('#tipo').value,
+      periodo: document.querySelector('#periodo').value,
+    };
+    pagina = 0;
+    mostrar('dados');
+  });
+  botoes.forEach(botao => botao.addEventListener('click', () => {
+    pagina = 0;
+    mostrar(botao.dataset.estado);
+  }));
+  document.querySelector('#voltar').addEventListener('click', () => {
+    pagina -= 1;
+    mostrar('dados');
+  });
+  document.querySelector('#avancar').addEventListener('click', () => {
+    pagina += 1;
+    mostrar('dados');
+  });
+  mostrar('dados');
+</script>
+</html>

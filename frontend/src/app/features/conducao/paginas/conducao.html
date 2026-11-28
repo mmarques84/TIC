@@ -1,0 +1,65 @@
+<h1>Condução</h1>
+@if (motorista || operacao) {
+  <p>Eventos filtrados pelo recorte do Cockpit. <a routerLink="/cockpit">Voltar ao Cockpit</a></p>
+}
+<form class="tic-cartao filtros" (ngSubmit)="filtrar()" ngNativeValidate>
+  <label>Período
+    <select name="periodo" [(ngModel)]="filtros.periodo">
+      <option value="7">Últimos 7 dias</option><option value="hoje">Hoje</option>
+      <option value="mes">Mês atual</option><option value="anterior">Mês anterior</option>
+    </select>
+  </label>
+  <label>Placa
+    <input name="placa" [(ngModel)]="filtros.placa" maxlength="8" pattern="[A-Za-z0-9\-]{1,8}" placeholder="Ex.: ABC1D23">
+  </label>
+  <label>Tipo de evento
+    <select name="tipo" [(ngModel)]="filtros.tipo">
+      <option value="">Todos</option>
+      @for (opcao of opcoes; track opcao[0]) { <option [value]="opcao[0]">{{ opcao[1] }}</option> }
+    </select>
+  </label>
+  <button type="submit" [disabled]="store.carregando()">Filtrar</button>
+</form>
+
+<section class="tic-cartao eventos" aria-label="Eventos de condução" [attr.aria-busy]="store.carregando()">
+  @if (store.carregando()) {
+    <p role="status">Carregando eventos…</p>
+  } @else if (store.erro()) {
+    <p role="alert">{{ store.erro() }}</p>
+    <button type="button" (click)="store.carregar()">Tentar novamente</button>
+  } @else if (store.dados(); as dados) {
+    <div class="cabecalho">
+      <h2>Eventos de condução</h2>
+      @if (dados.atualizadoEm; as horario) { <span>Última coleta concluída em {{ formatar(horario) }}</span> }
+    </div>
+    @switch (dados.estado) {
+      @case ('atraso') { <p role="status">A coleta da Autotrac está atrasada.</p> }
+      @case ('erro') { <p role="status">A coleta da Autotrac apresentou erro.</p> }
+      @case ('inativa') { <p role="status">A coleta da Autotrac ainda não está ativa.</p> }
+    }
+    @if (dados.eventos.length) {
+      <table aria-label="Eventos">
+        <thead><tr><th>Horário</th><th>Placa</th><th>Motorista</th><th>Tipo</th></tr></thead>
+        <tbody>
+          @for (evento of dados.eventos; track $index) {
+            <tr>
+              <td data-campo="Horário">{{ formatar(evento.horario) }}</td>
+              <td data-campo="Placa"><strong>{{ evento.placa }}</strong></td>
+              <td data-campo="Motorista">{{ evento.motorista || 'Não identificado' }}</td>
+              <td data-campo="Tipo">{{ tipos[evento.tipo] }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p role="status">Nenhum evento encontrado para esses filtros.</p>
+    }
+    @if (store.pagina() || dados.proximo) {
+      <nav class="paginacao" aria-label="Páginas de eventos">
+        <button type="button" (click)="store.voltar()" [disabled]="!store.pagina()">Anterior</button>
+        <span>Página {{ store.pagina() + 1 }}</span>
+        <button type="button" (click)="store.avancar()" [disabled]="!dados.proximo">Próxima</button>
+      </nav>
+    }
+  }
+</section>

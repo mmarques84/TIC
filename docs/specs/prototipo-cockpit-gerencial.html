@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cockpit gerencial · TIC</title>
+<style>
+  :root { color: #1f2f58; background: #f4f7fb; font: 16px "Titillium Web", Tahoma, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header { padding: 18px 24px; background: #1f2f58; color: white; }
+  main { max-width: 1280px; margin: auto; padding: 24px 16px; }
+  h1, h2, p { margin: 0 0 12px; }
+  section, form { background: white; border: 1px solid #d6dee8; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  form, .estados { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  label { display: grid; gap: 4px; flex: 1 1 150px; min-width: 0; }
+  input, select, button { min-height: 44px; color: inherit; font: inherit; background: white; border: 1px solid #b9c5d4; border-radius: 6px; padding: 0 10px; }
+  button { cursor: pointer; }
+  button[type=submit] { background: #f5b201; font-weight: 700; }
+  output { font-size: 36px; font-weight: bold; }
+  .graficos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .linha { display: grid; grid-template-columns: minmax(88px, 2fr) minmax(32px, 3fr) 3ch; align-items: center; gap: 8px; margin-block: 10px; }
+  meter { width: 100%; accent-color: #337ab7; }
+  meter::-webkit-meter-optimum-value { background: #337ab7; }
+  @media (max-width: 760px) { .graficos { grid-template-columns: 1fr; gap: 0; } }
+</style>
+<header>Painel Digital TIC / Painéis / Cockpit gerencial</header>
+<main>
+  <h1>Cockpit gerencial</h1>
+  <p>Autotrac · Telemetria · Dados fictícios</p>
+  <form id="filtros">
+    <label>Período <select name="periodo"><option value="7">Últimos 7 dias</option><option value="hoje">Hoje</option><option value="mes">Mês atual</option><option value="anterior">Mês anterior</option></select></label>
+    <label>Operação <select name="operacao"><option value="">Todas</option><option>Ipiranga</option><option>OPASC</option><option>Araucária</option></select></label>
+    <label>Placa <input name="placa" placeholder="Ex.: ABC1D23"></label>
+    <label>Tipo <select name="tipo"><option value="">Todos</option><option>Freada brusca</option><option>Velocidade excessiva</option><option>Marcha lenta excessiva</option></select></label>
+    <button>Aplicar filtros</button>
+  </form>
+  <section id="feedback" hidden aria-live="polite">
+    <p id="mensagem"></p>
+    <button id="repetir" type="button" hidden>Tentar novamente</button>
+  </section>
+  <div id="resultados">
+    <section><h2>Eventos no período</h2><output id="total"></output><p id="coleta">Última coleta fictícia em 27/11 às 10h38</p></section>
+    <div class="graficos">
+      <section><h2>Evolução diária</h2><div id="dias"></div></section>
+      <section><h2>Distribuição por tipo</h2><div id="tipos"></div></section>
+    </div>
+  </div>
+  <nav class="estados" aria-label="Simular estados">
+    <button type="button" data-estado="dados">Dados</button>
+    <button type="button" data-estado="carregando">Carregando</button>
+    <button type="button" data-estado="vazio">Vazio</button>
+    <button type="button" data-estado="erro">Erro</button>
+    <button type="button" data-estado="atraso">Coleta atrasada</button>
+    <button type="button" data-estado="restrito">Sem permissão</button>
+  </nav>
+</main>
+<script>
+  const amostra = [
+    ['27/11', 'Ipiranga', 'ABC1D23', 'Freada brusca', 18],
+    ['27/11', 'OPASC', 'XYZ4E56', 'Velocidade excessiva', 12],
+    ['26/11', 'Araucária', 'DEF2G34', 'Marcha lenta excessiva', 19],
+    ['26/11', 'Ipiranga', 'ABC1D23', 'Velocidade excessiva', 16],
+    ['25/11', 'OPASC', 'XYZ4E56', 'Freada brusca', 13],
+    ['24/11', 'Araucária', 'DEF2G34', 'Freada brusca', 21],
+    ['23/11', 'Ipiranga', 'ABC1D23', 'Marcha lenta excessiva', 12],
+    ['22/11', 'OPASC', 'XYZ4E56', 'Velocidade excessiva', 17],
+    ['21/11', 'Araucária', 'DEF2G34', 'Freada brusca', 8],
+    ['11/11', 'Ipiranga', 'ABC1D23', 'Freada brusca', 11],
+    ['28/10', 'OPASC', 'XYZ4E56', 'Velocidade excessiva', 20],
+  ];
+  const form = document.querySelector('#filtros');
+  let filtros = new FormData(form);
+  const mensagens = {
+    carregando: 'Carregando o resumo…',
+    vazio: 'Nenhum evento encontrado para esses filtros.',
+    erro: 'Não foi possível carregar o resumo.',
+    restrito: 'Seu perfil não tem acesso ao Cockpit gerencial.',
+  };
+  function desenhar(id, dados, coluna) {
+    const grupos = new Map();
+    dados.forEach(linha => grupos.set(linha[coluna], (grupos.get(linha[coluna]) || 0) + linha[4]));
+    const itens = [...grupos].sort((a, b) => coluna === 0 ? a[0].localeCompare(b[0]) : b[1] - a[1]);
+    const max = Math.max(1, ...grupos.values());
+    const painel = document.querySelector(id);
+    painel.replaceChildren();
+    for (const [nome, quantidade] of itens) {
+      const linha = document.createElement('div');
+      linha.className = 'linha';
+      const rotulo = document.createElement('span');
+      rotulo.textContent = nome;
+      const barra = document.createElement('meter');
+      barra.max = max;
+      barra.value = quantidade;
+      barra.setAttribute('aria-label', nome);
+      const valor = document.createElement('strong');
+      valor.textContent = quantidade;
+      linha.append(rotulo, barra, valor);
+      painel.append(linha);
+    }
+  }
+  function mostrar(estado) {
+    const registros = estado === 'vazio' ? [] : amostra.filter(([data, operacao, placa, tipo]) => {
+      const [dia, mes] = data.split('/').map(Number);
+      const periodo = filtros.get('periodo');
+      const noPeriodo = periodo === 'anterior' ? mes === 10 :
+        mes === 11 && (periodo === 'hoje' ? dia === 27 : periodo === '7' ? dia >= 21 : true);
+      return noPeriodo && (!filtros.get('operacao') || operacao === filtros.get('operacao')) &&
+        placa.includes(filtros.get('placa').trim().toUpperCase()) &&
+        (!filtros.get('tipo') || tipo === filtros.get('tipo'));
+    });
+    const exibirResumo = ['dados', 'vazio', 'atraso'].includes(estado);
+    const mensagem = exibirResumo && !registros.length ? mensagens.vazio : mensagens[estado];
+    document.querySelector('#feedback').hidden = !mensagem;
+    document.querySelector('#mensagem').textContent = mensagem || '';
+    document.querySelector('#repetir').hidden = estado !== 'erro';
+    document.querySelector('#resultados').hidden = !exibirResumo;
+    document.querySelector('.graficos').hidden = !registros.length;
+    document.querySelector('#total').textContent = registros.reduce((total, linha) => total + linha[4], 0);
+    document.querySelector('#coleta').textContent = estado === 'atraso'
+      ? 'Coleta atrasada · Última coleta fictícia em 27/11 às 10h38'
+      : 'Última coleta fictícia em 27/11 às 10h38';
+    desenhar('#dias', registros, 0);
+    desenhar('#tipos', registros, 3);
+  }
+  form.addEventListener('submit', evento => {
+    evento.preventDefault();
+    filtros = new FormData(form);
+    mostrar('dados');
+  });
+  document.querySelector('#repetir').addEventListener('click', () => mostrar('dados'));
+  document.querySelectorAll('[data-estado]').forEach(botao =>
+    botao.addEventListener('click', () => mostrar(botao.dataset.estado)));
+  mostrar('dados');
+</script>
+</html>

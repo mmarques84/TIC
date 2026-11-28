@@ -1,5 +1,7 @@
 # Specs do TIC Painel Digital
 
+Referência para a migração: [Fontes dos painéis atuais da TIC](fontes-paineis-atuais.md).
+
 Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o que está em aberto.** Modelo: [`_modelo.md`](_modelo.md). Nenhuma funcionalidade é codada sem spec **aprovada**. Mudou a regra, muda a spec no mesmo commit. Lista e ordem justificadas em [`../plano.md`](../plano.md) §6.
 
 | Spec | Marco | Status | Depende de |
@@ -7,7 +9,7 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | [seguranca-acesso.md](seguranca-acesso.md) | 1 | rascunho (login, me e logout implementados localmente) | — |
 | [ingestao-autotrac.md](ingestao-autotrac.md) | 2 | implementada localmente (26/11): Telemetria e ATIC, testadas com o sandbox | estudo em `../estudo-api-atic.md`; mapa de eventos (Michael/Rafael) |
 | ingestao-moovsec.md | 2 | a criar (estudo da API em `../estudo-api-moovsec.md`, 26/11) | URL do Moovsec da TIC, usuário de integração |
-| correlacao.md | 2 | a criar | ingestões |
+| [correlacao.md](correlacao.md) | 2 | regra de abertura e gravidade pendentes | Telemetria Autotrac |
 | parametros.md | 2 | a criar | limites por operação (Michael) |
 | [motor-jornada.md](motor-jornada.md) | 3a | implementada no banco (20/11) | skill regras-jornada; limites por operação (Michael) |
 | alertas-escalonamento.md | 3a | a criar | teste de sirene |
@@ -16,10 +18,10 @@ Uma spec por funcionalidade: **o que faz, regras, quem pode, como verificar, o q
 | opi.md | 3a | a criar | OPIs e vídeos (Natanael) |
 | [jornada-painel.md](jornada-painel.md) | 3b | implementada com dados fictícios (23/11) | motor-jornada |
 | torre.md | 3b | a criar | Datapar (Michael) |
-| cockpit-gerencial.md | 3b | a criar | alertas, triagem |
+| [cockpit-gerencial.md](cockpit-gerencial.md) | 3b | publicado com Telemetria Autotrac (27/11) | Telemetria Autotrac |
 | cockpit-opi.md | 3b | a criar | opi |
 | consumo-ia.md | 3b | a criar | orquestrador |
 | [inicio-resumo.md](inicio-resumo.md) (Início com dados reais) | 2 | implementada (26/11) | alertas, jornada, integrações |
-| [relatorio-conducao.md](relatorio-conducao.md) (Condução por motorista) | 3b | rascunho (26/11) | ingestão Autotrac (pronta); layout a aprovar |
+| [relatorio-conducao.md](relatorio-conducao.md) (Condução por motorista) | 3b | consulta de eventos implementada (27/11); ranking e exportação em rascunho | ingestão Autotrac |
 | [admin-usuarios.md](admin-usuarios.md) (Admin · Usuários e perfis) | 1–2 | implementada localmente (20/11) | seguranca-acesso |
 | admin.md (parâmetros, integrações, auditoria) | 2–3b | a criar | seguranca-acesso |

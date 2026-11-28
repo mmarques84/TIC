@@ -8,6 +8,7 @@ export type Permissao =
   | 'alerta.acionar'
   | 'imagem.ver'
   | 'jornada.ver'
+  | 'conducao.ver'
   | 'jornada.tratar'
   | 'torre.ver'
   | 'opi.ver'

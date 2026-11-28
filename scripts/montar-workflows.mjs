@@ -413,6 +413,24 @@ apiDeTela('TicApiInicio0001', 'api-inicio', 'n8n/codigo/inicio/rotas.js', ({ rot
     query: 'SELECT * FROM controle.sp_inicio_resumo($1::uuid)', params: `[${A('Resumo')}.usuarioId]` }, 0);
 });
 
+apiDeTela('TicApiConducao01', 'api-conducao', 'n8n/codigo/conducao/rotas.js', ({ rota, A, Q }) => {
+  rota({
+    webhook: 'GET conducao/eventos', metodo: 'GET', caminho: 'conducao/eventos', base: 'Eventos',
+    permissao: 'conducao.ver', resposta: 'Eventos resposta',
+    query: "SELECT * FROM derivado.sp_conducao_eventos($1::uuid, $2, $3, $4, $5, $6, NULLIF($7, '')::uuid)",
+    params: `[${A('Eventos')}.usuarioId, ${Q('Eventos', 'periodo', 12)}, ${Q('Eventos', 'placa', 9)}, ${Q('Eventos', 'tipo', 41)}, ${Q('Eventos', 'cursor', 160)}, ${Q('Eventos', 'motorista', 100)}, ${Q('Eventos', 'operacao', 37)}]`,
+  }, 0);
+});
+
+apiDeTela('TicApiCockpit001', 'api-cockpit', 'n8n/codigo/cockpit/rotas.js', ({ rota, A, Q }) => {
+  rota({
+    webhook: 'GET cockpit/resumo', metodo: 'GET', caminho: 'cockpit/resumo', base: 'Resumo',
+    permissao: 'cockpit.ver', resposta: 'Resumo resposta',
+    query: "SELECT * FROM derivado.sp_cockpit_resumo($1::uuid, $2, NULLIF($3, '')::uuid, $4, $5)",
+    params: `[${A('Resumo')}.usuarioId, ${Q('Resumo', 'periodo', 12)}, ${Q('Resumo', 'operacao', 37)}, ${Q('Resumo', 'placa', 9)}, ${Q('Resumo', 'tipo', 41)}]`,
+  }, 0);
+});
+
 // ---------------- ingestão da Autotrac (spec ingestao-autotrac) ----------------
 // Credencial "Autotrac (API)": Custom Auth com os cabeçalhos Authorization (Basic em texto puro) e Ocp-Apim-Subscription-Key.
 // Criada por scripts/n8n-credencial-autotrac.sh; nunca aparece no JSON do workflow.

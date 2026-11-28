@@ -24,6 +24,7 @@ export const MENU: GrupoMenu[] = [
       { rotulo: 'Cockpit gerencial', rota: '/cockpit', permissao: 'cockpit.ver' },
       { rotulo: 'Cockpit OPI', rota: '/opi', permissao: 'opi.ver' },
       { rotulo: 'Jornada', rota: '/jornada', permissao: 'jornada.ver' },
+      { rotulo: 'Condução', rota: '/conducao', permissao: 'conducao.ver' },
       { rotulo: 'Torre de chegadas', rota: '/torre', permissao: 'torre.ver' },
       { rotulo: 'Consumo de IA', rota: '/consumo-ia', permissao: 'consumo_ia.ver' },
     ],

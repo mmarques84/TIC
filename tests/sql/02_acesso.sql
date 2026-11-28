@@ -50,7 +50,7 @@ BEGIN
 
   -- Me
   ASSERT (SELECT usuario->>'perfil' FROM acesso.sp_auth_me('00000000-0000-7000-8000-00000000aa01')) = 'operacao', 'me';
-  ASSERT jsonb_array_length((SELECT usuario->'permissoes' FROM acesso.sp_auth_me('00000000-0000-7000-8000-00000000aa01'))) = 9, 'me permissões';
+  ASSERT jsonb_array_length((SELECT usuario->'permissoes' FROM acesso.sp_auth_me('00000000-0000-7000-8000-00000000aa01'))) = 10, 'me permissões'; -- 9 + conducao.ver (migration 018)
 
   -- Logout derruba a sessão
   PERFORM acesso.sp_logout(s.sessao_id, NULL);

@@ -10,6 +10,8 @@ const TELAS_PRONTAS: Record<string, () => Promise<Type<unknown>>> = {
   '/admin/usuarios': () => import('./features/admin/paginas/usuarios/usuarios').then((m) => m.AdminUsuarios),
   '/alertas': () => import('./features/central/paginas/central/central').then((m) => m.Central),
   '/jornada': () => import('./features/jornada/paginas/jornada/jornada').then((m) => m.Jornada),
+  '/conducao': () => import('./features/conducao/paginas/conducao').then((m) => m.Conducao),
+  '/cockpit': () => import('./features/cockpit/paginas/cockpit').then((m) => m.Cockpit),
 };
 
 export const routes: Routes = [

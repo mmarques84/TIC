@@ -1,13 +1,25 @@
 # Spec: Relatório de condução por motorista
 
-**Status:** rascunho (para aprovação do Marcus) · **Marco:** 3b (novo, sugerido em 26/11/2026) · **Atualizada em:** 2026-11-26
-**Telas:** nova tela "Condução" (layout a criar e aprovar antes de codar) · **Tabelas:** lê `bruto.autotrac_evento`, `cadastro.motorista`, `cadastro.veiculo`, `controle.evento_mapa`; grava `controle.auditoria` (exportação) · **Workflows:** `api-conducao` (novo) · **Funções:** `sp_conducao_ranking`, `sp_conducao_motorista`
+**Status:** consulta de eventos implementada; ranking, detalhe e exportação em rascunho · **Marco:** 3b · **Atualizada em:** 2026-11-27
+**Primeira entrega:** tela Condução, workflow `api-conducao` e função `sp_conducao_eventos`. A consulta lê `bruto.autotrac_evento`, `cadastro.motorista`, `cadastro.veiculo` e o estado da ingestão.
 
 ## O que faz
 
 Mostra, por motorista e por caminhão, **como a frota está sendo conduzida**, a partir dos eventos de telemetria que a Autotrac já manda ao painel (≈ 30 mil por dia): velocidade excessiva, RPM excessiva, fora da faixa verde, marcha lenta excessiva, banguela, aceleração e freada bruscas, pressão do óleo. A equipe de frota/OPI e a operação usam para **orientar o motorista**, escolher quem precisa de OPI/treinamento e acompanhar a evolução. Não é alerta em tempo real (isso é a Central): é o retrato da semana ou do mês.
 
 ## Regras
+
+### Primeira entrega — consulta de eventos
+
+- **E1.** Abrir **Painéis → Condução** para consultar os eventos de condução já gravados pela Telemetria (tipos de R9 e R11), em ordem do mais recente para o mais antigo, com paginação.
+- **E2.** Aplicar os períodos de R3 e permitir filtrar por placa e tipo. Cada linha mostra horário em `America/Sao_Paulo`, placa, motorista e tipo. Quando não houver identificação disponível, mostrar **Não identificado**.
+- **E3.** A permissão `conducao.ver` é concedida a admin, diretoria, operação e frota/OPI. Aplicar o escopo das operações de R2 no servidor. Exibir a hora da última coleta concluída e o estado da Telemetria. Usar `GET /api/conducao/eventos`.
+- **E4.** O ranking, o gráfico e o CSV permanecem na segunda entrega. A primeira entrega só consulta dados do banco.
+- **E5.** Os links do Cockpit abrem a consulta com os filtros aplicados. Para abrir um motorista, usar o ID cadastrado ou o código Autotrac; o banco preserva o escopo de operação e a paginação da consulta.
+
+**Validação da primeira entrega:** conferir permissões e isolamento por operação, combinar os três filtros, conferir a ordenação e a ausência de duplicatas entre páginas, validar motorista ausente e testar os estados de carregamento, vazio e erro. [Protótipo da consulta](prototipo-conducao.html).
+
+Em 27/11, a tela foi publicada na VPS. O build Angular passou localmente e na VPS. A consulta no PostgreSQL da VPS retornou duas páginas de 50 eventos sem repetição e bloqueou o perfil TI. A página e o bundle responderam 200, e a API sem sessão respondeu 401. A navegação com sessão no navegador ficou pendente.
 
 **Quem vê**
 - **R1.** Ver exige a permissão nova `conducao.ver`. Proposta: diretoria, operação, frota/OPI e admin veem; central e TI não (em aberto).
