@@ -21,9 +21,12 @@ $$;
 DO $$
 DECLARE v1 text := '00000000-0000-7000-8000-0000000002a1'; v2 text := '00000000-0000-7000-8000-0000000002a2';
 BEGIN
-  -- motorista cadastrado (7001) no TST1C11: 100 km rodados, 4 eventos de condução
-  PERFORM pg_temp.ev(v1, 50, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1000, "HodometerEnd": 1060}');
-  PERFORM pg_temp.ev(v1, 40, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1060, "HodometerEnd": 1100}');
+  -- motorista cadastrado (7001) no TST1C11: leituras do hodômetro 1000 → 1060 → 1100 = 100 km (como na Autotrac real: só a leitura atual)
+  PERFORM pg_temp.ev(v1, 55, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1000}');
+  PERFORM pg_temp.ev(v1, 50, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1060}');
+  PERFORM pg_temp.ev(v1, 40, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 1100}');
+  -- leitura absurda (troca de equipamento) não conta
+  PERFORM pg_temp.ev(v1, 35, 'temporizado', '7001', 'MOTORISTA CADASTRADO', '{"HodometerStart": 9100}');
   PERFORM pg_temp.ev(v1, 30, 'velocidade_excessiva', '7001', 'MOTORISTA CADASTRADO');
   PERFORM pg_temp.ev(v1, 29, 'rpm_excessiva', '7001', 'MOTORISTA CADASTRADO');
   PERFORM pg_temp.ev(v1, 28, 'marcha_lenta_excessiva', '7001', 'MOTORISTA CADASTRADO',
@@ -32,10 +35,12 @@ BEGIN
   PERFORM pg_temp.ev(v1, 26, 'ignicao_ligada', '7001', 'MOTORISTA CADASTRADO');
   PERFORM pg_temp.ev(v1, 25, 'desconhecido', '7001', 'MOTORISTA CADASTRADO');
   -- motorista sem cadastro (8002) no TST2C22: 100 km, 10 eventos de velocidade
-  PERFORM pg_temp.ev(v2, 60, 'temporizado', '8002', 'FULANO AUTOTRAC', '{"HodometerStart": 500, "HodometerEnd": 600}');
+  PERFORM pg_temp.ev(v2, 65, 'temporizado', '8002', 'FULANO AUTOTRAC', '{"HodometerStart": 500}');
+  PERFORM pg_temp.ev(v2, 60, 'temporizado', '8002', 'FULANO AUTOTRAC', '{"HodometerStart": 600}');
   FOR i IN 1..10 LOOP PERFORM pg_temp.ev(v2, 10 + i, 'velocidade_excessiva', '8002', 'FULANO AUTOTRAC'); END LOOP;
   -- motorista com pouco km (9003): 10 km, 2 eventos → taxa "—"
-  PERFORM pg_temp.ev(v2, 5, 'temporizado', '9003', 'POUCO KM', '{"HodometerStart": 600, "HodometerEnd": 610}');
+  PERFORM pg_temp.ev(v2, 6, 'temporizado', '9003', 'POUCO KM', '{"HodometerStart": 600}');
+  PERFORM pg_temp.ev(v2, 5, 'temporizado', '9003', 'POUCO KM', '{"HodometerStart": 610}');
   PERFORM pg_temp.ev(v2, 3, 'banguela', '9003', 'POUCO KM');
   PERFORM pg_temp.ev(v2, 2, 'freada_brusca', '9003', 'POUCO KM');
 END $$;

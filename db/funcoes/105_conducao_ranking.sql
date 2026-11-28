@@ -24,8 +24,12 @@ BEGIN
          nullif(nullif(btrim(e.codigo_motorista), ''), '0'),
          CASE WHEN e.tipo IN ('fora_faixa_verde', 'marcha_lenta_excessiva') AND nullif(e.dados->>'EventDateTimeEnd', '') IS NOT NULL
               THEN greatest(0, least(600, extract(epoch FROM ((e.dados->>'EventDateTimeEnd')::timestamptz - e.horario)) / 60)) END,
+         -- R7: o "temporizado" real traz só a leitura atual do hodômetro (km), sem fim (visto na VPS em 28/11/2026).
+         -- Km = diferença para a leitura anterior do MESMO caminhão, para quem dirigia na leitura nova.
+         -- Diferença fora de 0–200 km entre leituras (troca de equipamento, leitura ruim) não conta.
          CASE WHEN e.tipo = 'temporizado'
-              THEN greatest(0, least(500, nullif(e.dados->>'HodometerEnd', '')::numeric - nullif(e.dados->>'HodometerStart', '')::numeric)) END,
+                   AND nullif(e.dados->>'HodometerStart', '')::numeric - lag(nullif(e.dados->>'HodometerStart', '')::numeric) OVER janela BETWEEN 0 AND 200
+              THEN nullif(e.dados->>'HodometerStart', '')::numeric - lag(nullif(e.dados->>'HodometerStart', '')::numeric) OVER janela END,
          e.velocidade
   FROM bruto.autotrac_evento e
   JOIN cadastro.veiculo v ON v.id = e.veiculo_id
@@ -35,7 +39,8 @@ BEGIN
   WHERE e.horario >= v_inicio::timestamp AT TIME ZONE 'America/Sao_Paulo'
     AND e.horario < v_fim::timestamp AT TIME ZONE 'America/Sao_Paulo'
     AND (e.tipo = 'temporizado' OR e.tipo = ANY (derivado.fn_tipos_conducao()))
-    AND acesso.fn_ve_operacao(p_usuario, v.operacao_id);
+    AND acesso.fn_ve_operacao(p_usuario, v.operacao_id)
+  WINDOW janela AS (PARTITION BY e.veiculo_id, e.tipo ORDER BY e.horario);
 END $$;
 
 -- Monta o ranking (R5–R11) a partir da base. p_visao 'motorista' | 'caminhao'; p_tipo '' ou um tipo de condução; p_q busca.
